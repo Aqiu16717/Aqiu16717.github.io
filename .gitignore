@@ -1,0 +1,26 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore generated static files
+public/
+
+# Ignore the database file
+db.json
+
+# Ignore the package-lock file (if you prefer not to lock dependency versions)
+package-lock.json
+
+# Ignore deployment directory
+.deploy_git/
+
+# Ignore temporary and log files
+*.log
+*.tmp
+
+# Ignore system-generated files
+.DS_Store
+Thumbs.db
+
+# Ignore Git metadata
+.git/
+
