@@ -4,14 +4,19 @@
   <meta charset="utf-8">
   
   
-  <title>Archives: 2025 | Hexo</title>
+  <title>InnoDB中B-tree(B+ tree)的加锁策略 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Hexo">
-<meta property="og:url" content="http://example.com/archives/2025/index.html">
+  <meta name="description" content="此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。 为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nod">
+<meta property="og:type" content="article">
+<meta property="og:title" content="InnoDB中B-tree(B+ tree)的加锁策略">
+<meta property="og:url" content="http://example.com/2025/11/12/innodb/index.html">
 <meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。 为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nod">
 <meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-11-12T14:35:51.000Z">
+<meta property="article:modified_time" content="2025-11-12T15:10:32.092Z">
 <meta property="article:author" content="John Doe">
+<meta property="article:tag" content="innodb, B tree, B+ tree">
 <meta name="twitter:card" content="summary">
   
     <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
@@ -69,58 +74,58 @@
 </header>
 
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2025" class="archive-year">2025</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2025/11/12/innodb/" class="archive-article-date">
-  <time class="dt-published" datetime="2025-11-12T14:35:51.000Z" itemprop="datePublished">Nov 12</time>
+        <section id="main"><article id="post-innodb" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2025/11/12/innodb/" class="article-date">
+  <time class="dt-published" datetime="2025-11-12T14:35:51.000Z" itemprop="datePublished">2025-11-12</time>
 </a>
-      
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2025/11/12/innodb/">InnoDB中B-tree(B+ tree)的加锁策略</a>
+    <h1 class="p-name article-title" itemprop="headline name">
+      InnoDB中B-tree(B+ tree)的加锁策略
     </h1>
   
 
-    </header>
-  </div>
-</article>
-  
+      </header>
     
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2025/10/12/hello-world/" class="archive-article-date">
-  <time class="dt-published" datetime="2025-10-12T14:29:37.087Z" itemprop="datePublished">Oct 12</time>
-</a>
+    <div class="e-content article-entry" itemprop="articleBody">
       
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2025/10/12/hello-world/">Hello World</a>
-    </h1>
-  
+        <p>此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。</p>
+<p>为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nodes会更容易出发锁竞争，降低并发性能。从non-leaf nodes的角度讲，在B+ tree中non-leaf nodes 存储的是指向子节点的指针，保护non-leaf nodes就是保护树结构。</p>
+<p>操作B tree时通常先获取 tree-latch-s，也就是树级别的s锁，这可以保证树的结构不被修改，然后自顶向下遍历树，找到要操作的叶子节点，对叶子节点加锁(node-latch)。在查找叶子节点的过程中，不会对非叶子节点加锁，这可以节省CPU时间，只需要保证响应的数据页不会被换出内存(bufferfixed)。</p>
+<p>如果操作会改变树结构，那就要先对树加x锁(tree-latch-x)，以节点分裂为例，首先找到要分裂的叶子节点，分配一个新数据页，向上层非叶子节点插入指向新页面的指针，之后就可以释放tree-latch-x（因为树结构变更已经完成），迁移部分数据从原叶子节点到新分裂出的叶子节点。</p>
 
-    </header>
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2025/11/12/innodb/" data-id="cuidcH53An7cNMedjGeQfqYYb" data-title="InnoDB中B-tree(B+ tree)的加锁策略" class="article-share-link"><span class="fa fa-share">Share</span></a>
+      
+      
+      
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/innodb-B-tree-B-tree/" rel="tag">innodb, B tree, B+ tree</a></li></ul>
+
+    </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2025/10/12/hello-world/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Hello World</div>
+    </a>
+  
+</nav>
+
+  
 </article>
-  
-  
-    </div></section>
-  
 
 
 </section>
