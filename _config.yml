@@ -3,17 +3,17 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: Hexo
-subtitle: ''
-description: ''
-keywords:
-author: John Doe
-language: en
+title: Aqiu's Blog
+subtitle: '记录学习与生活'
+description: '个人技术博客，分享编程、数据库、分布式系统等技术文章'
+keywords: '编程, 技术, 博客, MySQL, Go, 分布式系统'
+author: Aqiu
+language: zh-CN
 timezone: ''
 
 # URL
 ## Set your site url here. For example, if you use GitHub Page, set url as 'https://username.github.io/project'
-url: http://example.com
+url: https://aqiu16717.github.io
 permalink: :year/:month/:day/:title/
 permalink_defaults:
 pretty_urls:
@@ -93,10 +93,25 @@ include:
 exclude:
 ignore:
 
+# RSS Feed
+feed:
+  enable: true
+  type: atom
+  path: atom.xml
+  limit: 20
+  hub:
+  content:
+  content_limit: 140
+  content_limit_delim: ' '
+  order_by: -date
+  icon: 
+  autodiscovery: true
+  template:
+
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: landscape
+theme: cactus
 
 # Deployment
 ## Docs: https://hexo.io/docs/one-command-deployment
@@ -104,3 +119,80 @@ deploy:
   type: git
   repo: git@github.com:Aqiu16717/Aqiu16717.github.io.git
   branch: main
+
+##############################################################################
+# Cactus Theme Configuration
+##############################################################################
+theme_config:
+  # Navigation
+  nav:
+    home: /
+    about: /about/
+    articles: /archives/
+    projects: https://github.com/Aqiu16717
+
+  # Social links
+  social_links:
+    -
+      icon: github
+      link: https://github.com/Aqiu16717
+    -
+      icon: mail
+      link: mailto:aqiu16717@gmail.com
+
+  # Posts overview
+  posts_overview:
+    show_all_posts: false
+    post_count: 5
+    sort_updated: false
+
+  # Article view
+  post:
+    show_updated: true
+
+  # Color scheme: dark, light, classic, white
+  colorscheme: dark
+
+  # Page width
+  page_width: 48
+
+  # Copyright
+  copyright:
+    start_year: 2024
+
+  # 404 page
+  error_404:
+    enabled: true
+    title: "404 - 页面未找到"
+    description: "抱歉，您访问的页面不存在或已被移除。"
+
+  # RSS
+  rss: atom.xml
+
+  # Comments - Giscus (基于 GitHub Discussions)
+  # 配置步骤：
+  # 1. 访问 https://giscus.app/ 获取配置
+  # 2. 在 GitHub 上创建 Discussions
+  # 3. 安装 Giscus app: https://github.com/apps/giscus
+  # 4. 填写以下配置信息
+  giscus:
+    enabled: true
+    repo: Aqiu16717/Aqiu16717.github.io
+    repo_id: R_kgDOHKvpgw
+    category: Announcements
+    category_id: DIC_kwDOHKvpg84C1uo1
+    mapping: pathname
+    strict: 0
+    reactions_enabled: 1
+    emit_metadata: 0
+    input_position: bottom
+    theme: preferred_color_scheme
+    lang: zh-CN
+
+  # MathJax
+  mathjax:
+    enabled: false
+
+  # CDN
+  cdn:
+    enable: true
