@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="snapshot isolationsnapshot isolation 即快照隔离级别，是数据库用于并发控制的一种隔离级别。 实现 snapshot isolation 通过mvcc实现  mvcc mvcc指多版本并发控制（multi-version concurrency control）  读操作 快照读：不使用锁机制，基于事务开始时刻的快照进行读取  写操作 读-写冲突：读写之间不会发生">
+<meta property="og:type" content="article">
+<meta property="og:title" content="快照隔离级别（Snapshot Isolation）详解">
+<meta property="og:url" content="https://aqiu16717.github.io/2026/02/09/snapshot-isolation/index.html">
+<meta property="og:site_name" content="Aqiu&#39;s Blog">
+<meta property="og:description" content="snapshot isolationsnapshot isolation 即快照隔离级别，是数据库用于并发控制的一种隔离级别。 实现 snapshot isolation 通过mvcc实现  mvcc mvcc指多版本并发控制（multi-version concurrency control）  读操作 快照读：不使用锁机制，基于事务开始时刻的快照进行读取  写操作 读-写冲突：读写之间不会发生">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-02-09T15:30:00.000Z">
+<meta property="article:modified_time" content="2026-02-09T15:35:10.444Z">
+<meta property="article:author" content="Aqiu">
+<meta property="article:tag" content="MVCC">
+<meta property="article:tag" content="事务">
+<meta property="article:tag" content="数据库">
+<meta property="article:tag" content="隔离级别">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>快照隔离级别（Snapshot Isolation）详解</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+      <link rel="alternate" href="/atom.xml" title="Aqiu&#39;s Blog" type="application/atom+xml" />
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.0.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2025/11/12/innodb/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&text=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&is_video=false&description=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=快照隔离级别（Snapshot Isolation）详解&body=Check out this article: https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&name=快照隔离级别（Snapshot Isolation）详解&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&t=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#snapshot-isolation"><span class="toc-number">1.</span> <span class="toc-text">snapshot isolation</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0"><span class="toc-number">1.1.</span> <span class="toc-text">实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mvcc"><span class="toc-number">1.2.</span> <span class="toc-text">mvcc</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E6%93%8D%E4%BD%9C"><span class="toc-number">1.3.</span> <span class="toc-text">读操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E6%93%8D%E4%BD%9C"><span class="toc-number">1.4.</span> <span class="toc-text">写操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AD%98%E5%9C%A8%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.5.</span> <span class="toc-text">存在的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2pl-2-phase-locking"><span class="toc-number">1.6.</span> <span class="toc-text">2pl (2-phase locking)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">1.7.</span> <span class="toc-text">参考</span></a></li></ol></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        快照隔离级别（Snapshot Isolation）详解
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">Aqiu</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2026-02-09T15:30:00.000Z" class="dt-published" itemprop="datePublished">2026-02-09</time>
+        
+        (Updated: <time datetime="2026-02-09T15:35:10.444Z" class="dt-updated" itemprop="dateModified">2026-02-09</time>)
+        
+      
+    </div>
+
+
+      
+    <div class="article-category">
+        <i class="fa-solid fa-archive"></i>
+        <a class="category-link" href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+    </div>
+
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/MVCC/" rel="tag">MVCC</a>, <a class="p-category" href="/tags/%E4%BA%8B%E5%8A%A1/" rel="tag">事务</a>, <a class="p-category" href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" rel="tag">数据库</a>, <a class="p-category" href="/tags/%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB/" rel="tag">隔离级别</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <h1 id="snapshot-isolation"><a href="#snapshot-isolation" class="headerlink" title="snapshot isolation"></a>snapshot isolation</h1><p>snapshot isolation 即快照隔离级别，是数据库用于并发控制的一种隔离级别。</p>
+<h2 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h2><ul>
+<li>snapshot isolation 通过mvcc实现</li>
+</ul>
+<h2 id="mvcc"><a href="#mvcc" class="headerlink" title="mvcc"></a>mvcc</h2><ul>
+<li>mvcc指多版本并发控制（multi-version concurrency control）</li>
+</ul>
+<h2 id="读操作"><a href="#读操作" class="headerlink" title="读操作"></a>读操作</h2><ul>
+<li>快照读：不使用锁机制，基于事务开始时刻的快照进行读取</li>
+</ul>
+<h2 id="写操作"><a href="#写操作" class="headerlink" title="写操作"></a>写操作</h2><ul>
+<li><p>读-写冲突：读写之间不会发生冲突，读操作基于事务开始时的快照，不会阻塞写操作</p>
+</li>
+<li><p>写-写冲突：只有一个事务能提交成功，另外一个事务会回滚。</p>
+<ul>
+<li>写入时需要进行冲突检测：在提交时检查是否有其他并发事务修改了相同的数据</li>
+</ul>
+</li>
+<li><p>乐观并发控制</p>
+<ul>
+<li>提交时进行冲突检测，如果有冲突就回滚，然后重试</li>
+<li>快照隔离级别中的写写冲突控制属于这个范畴</li>
+</ul>
+</li>
+<li><p>悲观并发控制</p>
+<ul>
+<li>写操作先对资源加锁，然后再进行操作</li>
+<li>存在锁等待问题，需要处理锁超时。存在死锁问题，需要进行死锁检测</li>
+</ul>
+</li>
+</ul>
+<h2 id="存在的问题"><a href="#存在的问题" class="headerlink" title="存在的问题"></a>存在的问题</h2><ul>
+<li>幻读</li>
+<li>写偏斜</li>
+</ul>
+<h2 id="2pl-2-phase-locking"><a href="#2pl-2-phase-locking" class="headerlink" title="2pl (2-phase locking)"></a>2pl (2-phase locking)</h2><ul>
+<li>2pl是一种悲观并发控制方法，保证冲突序列化性</li>
+<li>锁的应用和删除分两个阶段<ul>
+<li>扩展阶段：事务可以获取锁，但不能释放锁</li>
+<li>收缩阶段：事务可以释放锁，但不能获取锁。一旦事务开始释放锁就进入了收缩阶段，就不能再获取锁</li>
+</ul>
+</li>
+<li>基本协议使用两种锁类型：共享锁和排他锁<ul>
+<li>共享锁&#x2F;读锁<ul>
+<li>允许多个事务同时读取数据而不进行写入</li>
+<li>当一个数据项被共享锁定时，其他事务也可以申请共享锁，但不能申请排他锁</li>
+</ul>
+</li>
+<li>排他锁&#x2F;写锁<ul>
+<li>允许事务对数据进行读取和写入</li>
+<li>当一个数据项被排他锁定时，其他事务不能申请任何类型的锁</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.pingcap.com/zh/tidb/stable/transaction-isolation-levels">https://docs.pingcap.com/zh/tidb/stable/transaction-isolation-levels</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.pingcap.com/zh/tidb/stable/pessimistic-transaction">https://docs.pingcap.com/zh/tidb/stable/pessimistic-transaction</a></li>
+</ul>
+
+  </div>
+</article>
+
+
+
+    <div class="blog-post-comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="Aqiu16717/Aqiu16717.github.io"
+            data-repo-id="R_kgDOHKvpgw"
+            data-category="Announcements"
+            data-category-id="DIC_kwDOHKvpg84C1uo1"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="preferred_color_scheme"
+            data-lang="zh-CN"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#snapshot-isolation"><span class="toc-number">1.</span> <span class="toc-text">snapshot isolation</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0"><span class="toc-number">1.1.</span> <span class="toc-text">实现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mvcc"><span class="toc-number">1.2.</span> <span class="toc-text">mvcc</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E6%93%8D%E4%BD%9C"><span class="toc-number">1.3.</span> <span class="toc-text">读操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%99%E6%93%8D%E4%BD%9C"><span class="toc-number">1.4.</span> <span class="toc-text">写操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AD%98%E5%9C%A8%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">1.5.</span> <span class="toc-text">存在的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2pl-2-phase-locking"><span class="toc-number">1.6.</span> <span class="toc-text">2pl (2-phase locking)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">1.7.</span> <span class="toc-text">参考</span></a></li></ol></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&text=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&is_video=false&description=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=快照隔离级别（Snapshot Isolation）详解&body=Check out this article: https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&title=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&name=快照隔离级别（Snapshot Isolation）详解&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/02/09/snapshot-isolation/&t=快照隔离级别（Snapshot Isolation）详解"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-center">
+    Copyright &copy;
+    
+    
+    2024-2026
+    Aqiu
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+ 
+  <link
+    rel="preload"
+    href="/lib/font-awesome/css/all.min.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="/lib/font-awesome/css/all.min.css"
+  /></noscript>
+
+
+    <!-- jquery -->
+
+  
+<script src="/lib/jquery/jquery.min.js"></script>
+
+
+
+
+
+<!-- clipboard -->
+
+  
+    
+<script src="/lib/clipboard/clipboard.min.js"></script>
+
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>

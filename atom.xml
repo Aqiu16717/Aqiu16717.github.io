@@ -6,7 +6,7 @@
   <link href="https://aqiu16717.github.io/atom.xml" rel="self"/>
   
   <link href="https://aqiu16717.github.io/"/>
-  <updated>2026-02-01T15:41:26.887Z</updated>
+  <updated>2026-02-09T15:35:10.444Z</updated>
   <id>https://aqiu16717.github.io/</id>
   
   <author>
@@ -15,6 +15,37 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>快照隔离级别（Snapshot Isolation）详解</title>
+    <link href="https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"/>
+    <id>https://aqiu16717.github.io/2026/02/09/snapshot-isolation/</id>
+    <published>2026-02-09T15:30:00.000Z</published>
+    <updated>2026-02-09T15:35:10.444Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;h1 id=&quot;snapshot-isolation&quot;&gt;&lt;a href=&quot;#snapshot-isolation&quot; class=&quot;headerlink&quot; title=&quot;snapshot isolation&quot;&gt;&lt;/a&gt;snapshot</summary>
+        
+      
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="事务" scheme="https://aqiu16717.github.io/tags/%E4%BA%8B%E5%8A%A1/"/>
+    
+    <category term="隔离级别" scheme="https://aqiu16717.github.io/tags/%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB/"/>
+    
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
+  </entry>
   
   <entry>
     <title>InnoDB中B-tree(B+ tree)的加锁策略</title>
