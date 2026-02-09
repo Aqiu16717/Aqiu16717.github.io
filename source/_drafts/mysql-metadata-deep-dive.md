@@ -24,3 +24,12 @@ MySQL的元数据可以从不同的层次去看，正如它的架构分为sql层
 ## 什么是元数据？
 
 我们都知道元数据是描述数据的数据，在此场景下其实应该更加具象一些。对于数据库来说，最直观的数据就是表。如何去描述这个表，描述表的数据就是元数据。这并不严谨，但建立直觉足以。
+
+## sql 层元数据
+
+使用了两级缓存策略，每个表对象只有一个对应的TABLE_SHARE，每个线程有一个私有的TABLE。所有打开同一物理表的 TABLE 实例共享同一个 TABLE_SHARE。
+
+* TABLE 缓存在 Table_cache 中，最大容量是table_cache_size_per_instance
+* Table_cache 总共有 table_cache_instances 个实例
+
+* bool open_table(THD *thd, Table_ref *table_list, Open_table_context *ot_ctx) 用于打开一个base table
