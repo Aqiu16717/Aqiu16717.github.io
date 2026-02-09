@@ -1,6 +1,5 @@
 ---
 title: 快照隔离级别（Snapshot Isolation）详解
-date: 2026-02-09 23:30:00
 tags:
   - 数据库
   - 事务
@@ -9,7 +8,9 @@ tags:
 categories:
   - 数据库
 comments: true
+date: 2026-02-09 23:30:00
 ---
+
 
 # snapshot isolation
 
@@ -18,6 +19,10 @@ snapshot isolation 即快照隔离级别，是数据库用于并发控制的一�
 ## 实现
 
 * snapshot isolation 通过mvcc实现
+
+## mvcc
+
+* mvcc指多版本并发控制（multi-version concurrency control）
 
 ## 读操作
 
@@ -40,10 +45,6 @@ snapshot isolation 即快照隔离级别，是数据库用于并发控制的一�
 
 * 幻读
 * 写偏斜
-
-## mvcc
-
-* mvcc指多版本并发控制（multi-version concurrency control）
 
 ## 2pl (2-phase locking)
 
