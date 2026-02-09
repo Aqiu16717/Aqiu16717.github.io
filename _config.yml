@@ -131,6 +131,15 @@ theme_config:
     articles: /archives/
     projects: https://github.com/Aqiu16717
 
+  # Logo
+  logo:
+    enabled: true
+    width: 50
+    height: 50
+    url: /images/logo.jpg
+    gravatar: false
+    grayout: false
+
   # Social links
   social_links:
     -
