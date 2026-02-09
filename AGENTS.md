@@ -206,6 +206,63 @@ This project does not have an automated test suite. Testing is done manually by:
 - Never commit sensitive information (API keys, passwords) to the repository
 - The `_config.yml` contains deployment credentials via Git SSH URL
 
+## Git Branching Strategy
+
+This repository uses a **dual-branch workflow** for Hexo + GitHub Pages deployment:
+
+### Branch Overview
+
+| Branch | Purpose | Content | Push Method |
+|--------|---------|---------|-------------|
+| `main` | Website files | Generated static HTML/CSS/JS | `hexo deploy` (automatic) |
+| `source` | Source files | `_config.yml`, posts, themes, drafts | Manual `git push` |
+
+### Why Two Branches?
+
+1. **GitHub Pages Limitation**: GitHub Pages can only serve from one branch (`main` by default)
+2. **Hexo Workflow**: Hexo generates static files from source files, and these need separate version control
+3. **Clean Separation**: Source files (editable) and generated files (machine-generated) should not mix
+
+### Workflow
+
+```bash
+# 1. Work on source branch
+git checkout source
+
+# 2. Edit configs, write posts, modify themes...
+vim source/_posts/my-post.md
+
+# 3. Commit source changes
+git add -A
+git commit -m "docs: add new post"
+git push origin source
+
+# 4. Deploy to main branch (generates and pushes website files)
+hexo deploy
+```
+
+### Branch Details
+
+**`main` branch**:
+- Contains the generated static site from `hexo generate`
+- Used by GitHub Pages to serve the website
+- Should never be manually edited (always overwritten by `hexo deploy`)
+
+**`source` branch**:
+- Contains all source files needed to regenerate the site
+- Includes: `_config.yml`, `source/`, `themes/`, `scaffolds/`, `package.json`
+- Excludes: `node_modules/`, `public/`, `.deploy_git/` (in `.gitignore`)
+
+### Initial Setup
+
+If cloning on a new machine:
+```bash
+git clone git@github.com:Aqiu16717/Aqiu16717.github.io.git
+cd Aqiu16717.github.io
+git checkout source
+npm install
+```
+
 ## Dependency Management
 
 Dependabot is configured (`.github/dependabot.yml`) to check for npm package updates daily with a limit of 20 open pull requests.
