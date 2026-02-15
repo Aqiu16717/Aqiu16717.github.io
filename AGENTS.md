@@ -1,275 +1,252 @@
-# Project Overview
+# AGENTS.md - Aqiu's Blog
 
-This is a personal blog website built with [Hexo](https://hexo.io/), a fast, simple and powerful blog framework powered by Node.js. The site is deployed to GitHub Pages at `Aqiu16717.github.io`.
+## Project Overview
 
-The blog contains technical articles primarily written in Chinese, covering topics such as:
-- InnoDB B-tree locking strategies
-- Go programming language pointers and best practices
-- MySQL internals (metadata locking, DDL logs, table definition cache)
-- LevelDB and etcd/Raft distributed systems
+This is a **personal technical blog** hosted on GitHub Pages, generated using the [Hexo](https://hexo.io/) static site generator (version 8.0.0). The blog is written in Chinese (zh-CN) and focuses on programming, databases, and distributed systems.
+
+- **Website**: https://aqiu16717.github.io/
+- **Repository**: https://github.com/Aqiu16717/Aqiu16717.github.io
+- **Author**: Aqiu
+- **Generator**: Hexo 8.0.0
+- **Theme**: Cactus (a clean, responsive theme for Hexo)
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Static Site Generator | Hexo 8.0.0 |
-| Runtime | Node.js |
-| Template Engine | EJS (Embedded JavaScript) |
-| Styling | Stylus |
-| Markup | Markdown |
-| Theme | Landscape (Hexo default theme) |
-| Deployment | Git (hexo-deployer-git) |
+### Core Technologies
+- **Hexo 8.0.0** - Fast, simple & powerful blog framework
+- **Node.js** - Runtime for Hexo (required for development)
+- **EJS/Markdown** - Template and content formats
+
+### Frontend Libraries
+| Library | Version | Purpose |
+|---------|---------|---------|
+| jQuery | 3.x | DOM manipulation and event handling |
+| Font Awesome | 6.x | Icon library |
+| Clipboard.js | 2.x | Code block copy functionality |
+| Justified Gallery | - | Image gallery layout |
+
+### Comments & Analytics
+- **Giscus** - GitHub Discussions-based comment system (configured for this repo)
+- Reserved placeholders for: Google Analytics, Umami, Baidu Analytics, Cloudflare Analytics
 
 ## Project Structure
 
 ```
-.
-├── _config.yml              # Main Hexo configuration
-├── _config.landscape.yml    # Theme-specific configuration (empty)
-├── package.json             # Node.js dependencies and npm scripts
-├── scaffolds/               # Templates for new posts/pages/drafts
-│   ├── draft.md             # Template for drafts
-│   ├── page.md              # Template for pages
-│   └── post.md              # Template for posts
-├── source/                  # Content source files
-│   ├── _drafts/             # Draft posts (not published)
-│   ├── _posts/              # Published blog posts
-│   └── images/              # Static images
-├── themes/                  # Theme files
-│   └── landscape/           # Landscape theme (default)
-│       ├── _config.yml      # Theme configuration
-│       ├── layout/          # EJS templates
-│       ├── source/          # Theme assets (CSS, JS)
-│       └── scripts/         # Hexo tag plugins
-├── public/                  # Generated static site (gitignored)
-└── .deploy_git/             # Git repository for deployment
-```
-
-## Key Configuration Files
-
-### `_config.yml` (Main Configuration)
-
-- **Site metadata**: Title, author, language (en), timezone
-- **URL**: Currently set to `http://example.com` (needs update for production)
-- **Permalink format**: `:year/:month/:day/:title/`
-- **Theme**: `landscape`
-- **Deployment**: Git repository `git@github.com:Aqiu16717/Aqiu16717.github.io.git`, branch `main`
-- **Pagination**: 10 posts per page
-- **Syntax highlighting**: highlight.js with line numbers enabled
-
-### `package.json`
-
-Key dependencies:
-- `hexo`: ^8.0.0 (core framework)
-- `hexo-deployer-git`: ^4.0.0 (Git deployment)
-- `hexo-renderer-ejs`: ^2.0.0 (EJS template rendering)
-- `hexo-renderer-marked`: ^7.0.0 (Markdown rendering)
-- `hexo-renderer-stylus`: ^3.0.1 (Stylus CSS rendering)
-- `hexo-server`: ^3.0.0 (Development server)
-- `hexo-theme-landscape`: ^1.0.0 (Default theme)
-
-## Build and Development Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server (with live reload)
-npm run server
-# or
-hexo server
-
-# Generate static files
-npm run build
-# or
-hexo generate
-
-# Clean generated files and cache
-npm run clean
-# or
-hexo clean
-
-# Deploy to GitHub Pages
-npm run deploy
-# or
-hexo deploy
-
-# Create a new post
-hexo new post "Post Title"
-
-# Create a new draft
-hexo new draft "Draft Title"
-
-# Create a new page
-hexo new page "Page Title"
+Aqiu16717.github.io/
+├── index.html              # Homepage
+├── 404.html                # 404 error page
+├── atom.xml                # RSS/Atom feed
+├── about/                  # About page
+│   └── index.html
+├── archives/               # Archives organized by year/month
+│   ├── 2025/
+│   ├── 2026/
+│   └── index.html
+├── categories/             # Category pages
+│   └── 数据库/
+├── tags/                   # Tag pages
+│   ├── MVCC/
+│   ├── 事务/
+│   ├── 数据库/
+│   ├── 隔离级别/
+│   └── innodb-B-tree-B-tree/
+├── 2025/                   # Blog posts by year/month/day
+│   └── 11/
+│       └── 12/
+│           └── innodb/
+│               └── index.html
+├── 2026/
+│   └── 02/
+│       └── 09/
+│           └── snapshot-isolation/
+│               └── index.html
+├── css/                    # Stylesheets
+│   ├── style.css           # Main stylesheet (custom + basscss)
+│   └── rtl.css             # Right-to-left language support
+├── js/                     # JavaScript files
+│   ├── main.js             # Main UI interactions (menu, scroll, etc.)
+│   └── search.js           # Local search functionality
+├── lib/                    # Third-party libraries
+│   ├── clipboard/          # Clipboard.js
+│   ├── font-awesome/       # Font Awesome icons
+│   ├── jquery/             # jQuery
+│   ├── justified-gallery/  # Image gallery
+│   ├── meslo-LG/           # Meslo LG font files
+│   └── vazir-font/         # Vazir Persian/Arabic font
+└── images/                 # Static images
+    ├── logo.jpg/png        # Site logo
+    ├── favicon.ico         # Favicon
+    ├── favicon-192x192.png # Large favicon
+    └── apple-touch-icon.png # iOS icon
 ```
 
 ## Content Organization
 
-### Posts
-- Published posts go in `source/_posts/`
-- Each post is a Markdown file with YAML front matter
-- Posts are automatically published based on date
+### Blog Posts
+- Posts are organized by date: `/YYYY/MM/DD/post-name/index.html`
+- Each post has its own directory with an `index.html` file
+- Post URLs are clean (without `.html` extension in the path)
 
-### Drafts
-- Drafts go in `source/_drafts/`
-- Drafts are not published until moved to `_posts/`
-- Use `hexo publish draft-name` to publish a draft
+### Categories & Tags
+- Categories: Blog posts can be organized into categories (e.g., "数据库")
+- Tags: Posts can have multiple tags for better discoverability
+- Both categories and tags have their own index pages
 
-### Front Matter Format
+### URL Patterns
+| Page Type | URL Pattern |
+|-----------|-------------|
+| Home | `/` |
+| Post | `/YYYY/MM/DD/post-name/` |
+| About | `/about/` |
+| Archives | `/archives/` |
+| Year Archive | `/archives/YYYY/` |
+| Category | `/categories/category-name/` |
+| Tag | `/tags/tag-name/` |
+| RSS Feed | `/atom.xml` |
 
-```yaml
----
-title: Post Title
-date: 2025-11-12 22:35:51
-tags: tag1, tag2, tag3
----
-```
+## Development Workflow
 
-## Theme Structure (Landscape)
+> **Important**: This repository contains the **generated static files**, not the Hexo source files. The actual source (Markdown posts, theme config, _config.yml) is maintained in a separate repository or local environment.
 
-The Landscape theme is the default Hexo theme with the following structure:
+### How Content is Published
+1. Author writes posts in Markdown in the Hexo source project
+2. Run `hexo generate` to build static files
+3. Run `hexo deploy` or manually push generated files to this repository
+4. GitHub Pages automatically serves the content
 
-```
-themes/landscape/
-├── _config.yml          # Theme configuration
-├── layout/              # EJS templates
-│   ├── layout.ejs       # Base layout
-│   ├── index.ejs        # Homepage
-│   ├── post.ejs         # Post page
-│   ├── page.ejs         # Static page
-│   ├── archive.ejs      # Archive page
-│   ├── _partial/        # Reusable partials
-│   └── _widget/         # Sidebar widgets
-├── source/              # Static assets
-│   ├── css/             # Stylus stylesheets
-│   ├── js/              # JavaScript files
-│   └── fancybox/        # Fancybox image viewer
-└── scripts/             # Hexo tag plugins
-    └── fancybox.js      # Fancybox tag plugin
-```
-
-### Theme Features
-- Responsive sidebar (position: right)
-- Built-in widgets: category, tag, tagcloud, archive, recent_posts
-- Fancybox image lightbox integration
-- Google Analytics and Gauges Analytics support
-- Valine comment system support (currently disabled)
-- Social link icons via Fork Awesome
-
-## Deployment
-
-The site is configured to deploy to GitHub Pages using the `hexo-deployer-git` plugin.
-
-### Deployment Configuration
-```yaml
-deploy:
-  type: git
-  repo: git@github.com:Aqiu16717/Aqiu16717.github.io.git
-  branch: main
-```
-
-### Deployment Process
-1. Run `hexo deploy` or `npm run deploy`
-2. Hexo generates the static site to `public/`
-3. The `hexo-deployer-git` plugin pushes the `public/` directory to the specified Git repository
-4. The site is served from the `main` branch on GitHub Pages
-
-## Development Guidelines
-
-### Adding New Content
-1. Use `hexo new post "Title"` to create posts
-2. Use `hexo new draft "Title"` for work-in-progress content
-3. Store images in `source/images/` and reference them with relative paths
-4. Use tags to categorize content
-
-### Modifying Theme
-- Do NOT directly modify `themes/landscape/_config.yml`
-- Instead, copy configurations to `_config.landscape.yml` in the project root
-- This prevents changes from being lost during theme updates
-
-### Code Style
-- Blog posts are written in Chinese
-- Technical terms (InnoDB, B-tree, Go, MySQL, etc.) use English
-- Code blocks use standard Markdown syntax with language identifiers
-
-## Testing
-
-This project does not have an automated test suite. Testing is done manually by:
-1. Running `hexo server` to preview changes locally
-2. Verifying the generated site at `http://localhost:4000`
-3. Checking that all links, images, and formatting render correctly
-
-## Security Considerations
-
-- The `.gitignore` file excludes `node_modules/`, `public/`, and `db.json`
-- Never commit sensitive information (API keys, passwords) to the repository
-- The `_config.yml` contains deployment credentials via Git SSH URL
-
-## Git Branching Strategy
-
-This repository uses a **dual-branch workflow** for Hexo + GitHub Pages deployment:
-
-### Branch Overview
-
-| Branch | Purpose | Content | Push Method |
-|--------|---------|---------|-------------|
-| `main` | Website files | Generated static HTML/CSS/JS | `hexo deploy` (automatic) |
-| `source` | Source files | `_config.yml`, posts, themes, drafts | Manual `git push` |
-
-### Why Two Branches?
-
-1. **GitHub Pages Limitation**: GitHub Pages can only serve from one branch (`main` by default)
-2. **Hexo Workflow**: Hexo generates static files from source files, and these need separate version control
-3. **Clean Separation**: Source files (editable) and generated files (machine-generated) should not mix
-
-### Workflow
-
+### Typical Hexo Commands (for reference)
 ```bash
-# 1. Work on source branch
-git checkout source
+# Create a new post
+hexo new post "Post Title"
 
-# 2. Edit configs, write posts, modify themes...
-vim source/_posts/my-post.md
+# Generate static files
+hexo generate
 
-# 3. Commit source changes
-git add -A
-git commit -m "docs: add new post"
-git push origin source
+# Start local server for preview
+hexo server
 
-# 4. Deploy to main branch (generates and pushes website files)
+# Deploy to GitHub Pages
 hexo deploy
 ```
 
-### Branch Details
+## File Modification Guidelines
 
-**`main` branch**:
-- Contains the generated static site from `hexo generate`
-- Used by GitHub Pages to serve the website
-- Should never be manually edited (always overwritten by `hexo deploy`)
+### Safe to Modify Directly
+- **images/** - Add new images or replace existing ones
+- **css/style.css** - Custom CSS (note: theme updates may overwrite)
+- **lib/** - Update third-party libraries (maintain same structure)
 
-**`source` branch**:
-- Contains all source files needed to regenerate the site
-- Includes: `_config.yml`, `source/`, `themes/`, `scaffolds/`, `package.json`
-- Excludes: `node_modules/`, `public/`, `.deploy_git/` (in `.gitignore`)
+### Do NOT Modify Directly
+- HTML files in post directories (will be overwritten on next generate)
+- Archives, category, and tag index pages (auto-generated)
+- `atom.xml` (auto-generated)
 
-### Initial Setup
+### Adding New Posts
+Since this is the generated output repository:
+1. Modify the **Hexo source project** instead
+2. Or manually create a new post directory following the existing structure
+3. Update related index pages (homepage, archives, categories, tags, RSS)
 
-If cloning on a new machine:
-```bash
-git clone git@github.com:Aqiu16717/Aqiu16717.github.io.git
-cd Aqiu16717.github.io
-git checkout source
-npm install
-```
+## Key Features
 
-## Dependency Management
+### 1. Responsive Navigation
+- Mobile-friendly hamburger menu
+- Auto-hiding navigation on scroll (desktop)
+- Sticky footer navigation on mobile
 
-Dependabot is configured (`.github/dependabot.yml`) to check for npm package updates daily with a limit of 20 open pull requests.
+### 2. Social Sharing
+- Share buttons for: Facebook, Twitter, LinkedIn, Pinterest, Email, Pocket, Reddit, StumbleUpon, Digg, Tumblr, HackerNews
+- Appears on every blog post
 
-## Useful Resources
+### 3. Table of Contents (TOC)
+- Auto-generated TOC for posts with headings
+- Desktop: Sidebar TOC
+- Mobile: Footer TOC toggle
 
-- [Hexo Documentation](https://hexo.io/docs/)
-- [Hexo Configuration](https://hexo.io/docs/configuration.html)
-- [Hexo Deployment](https://hexo.io/docs/one-command-deployment.html)
-- [Landscape Theme](https://github.com/hexojs/hexo-theme-landscape)
+### 4. Code Copy
+- "Copy to clipboard" button on all code blocks
+- Visual feedback on successful copy
+
+### 5. Comments (Giscus)
+- GitHub Discussions-based commenting
+- Configured repository: `Aqiu16717/Aqiu16717.github.io`
+- Language: Chinese (zh-CN)
+
+### 6. Local Search
+- Client-side search functionality
+- Searches through post titles and content
+- Results displayed with context snippets
+
+### 7. RSS Feed
+- Atom format feed at `/atom.xml`
+- Includes all published posts with metadata
+
+## Code Style Guidelines
+
+### HTML
+- Indentation: 2 spaces
+- Semantic HTML5 elements
+- Schema.org microdata for SEO (`itemscope`, `itemtype`, `itemprop`)
+- h-card microformat for author information
+
+### CSS
+- Main stylesheet uses a utility-first approach (similar to Basscss)
+- Class naming: lowercase with hyphens
+- RTL support via separate `rtl.css`
+
+### JavaScript
+- jQuery-based
+- Comments in English (inherited from theme)
+- Event delegation for dynamic elements
+
+## SEO & Meta Tags
+
+Each page includes:
+- Open Graph tags (`og:*`)
+- Twitter Card tags
+- Article metadata (published time, modified time, author, tags)
+- Viewport meta for mobile
+- Canonical URLs
+
+## Browser Support
+
+- Modern browsers (Chrome, Firefox, Safari, Edge)
+- IE 11+ (with polyfills)
+- Mobile browsers (iOS Safari, Chrome Mobile)
+
+## Deployment
+
+- **Platform**: GitHub Pages
+- **Branch**: `main` (default)
+- **Custom Domain**: Not configured (uses default github.io domain)
+- **HTTPS**: Enabled by default
+
+## Security Considerations
+
+1. **No sensitive data** should be stored in this repository
+2. All user input (comments) goes through Giscus/GitHub
+3. Third-party scripts loaded from CDNs:
+   - Giscus client from `giscus.app`
+   - All other libraries are self-hosted in `/lib/`
+
+## Maintenance Notes
+
+### When Updating Theme
+1. Backup custom modifications in `css/style.css`
+2. Re-apply custom CSS after theme update
+3. Verify all pages render correctly
+
+### When Adding Features
+- Keep changes minimal and non-breaking
+- Test on both desktop and mobile
+- Ensure RSS feed remains valid
+
+## Contact & Links
+
+- **GitHub**: https://github.com/Aqiu16717
+- **Email**: aqiu16717@gmail.com
+- **Blog**: https://aqiu16717.github.io/
+
+---
+
+*This file was generated for AI coding agents working on the project. For the actual blog content and Hexo source, please refer to the separate source repository or the author's local development environment.*
