@@ -25,6 +25,67 @@
         <% if (tocHTML !== '') { %>
           <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> <%= __('post.mobile.toc') %></a>
         <% } %>
+        <!-- 语言切换 -->
+        <%
+          var isEnglishMobile = (page.lang === 'en') || page.path.startsWith('en/');
+          
+          // Find matching posts by slug pattern
+          var currentSlug = page.slug || '';
+          var baseSlug = currentSlug.replace(/-en$/, '');
+          
+          var zhUrlMobile = '/';
+          var enUrlMobile = '/en/';
+          
+          // Build URLs based on date
+          var datePath = '';
+          if (page.date) {
+            var d = page.date;
+            var year = d.year? d.year() : d.getFullYear();
+            var month = String(d.month? d.month() + 1 : d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.date? d.date() : d.getDate()).padStart(2, '0');
+            datePath = year + '/' + month + '/' + day + '/';
+          }
+          
+          // Find matching posts
+          site.posts.forEach(function(post) {
+            var postSlug = post.slug || '';
+            var postBaseSlug = postSlug.replace(/-en$/, '');
+            
+            if (postBaseSlug === baseSlug) {
+              if (post.lang === 'en' || post.lang === 'en-US') {
+                if (post.date) {
+                  var d = post.date;
+                  var year = d.year? d.year() : d.getFullYear();
+                  var month = String(d.month? d.month() + 1 : d.getMonth() + 1).padStart(2, '0');
+                  var day = String(d.date? d.date() : d.getDate()).padStart(2, '0');
+                  enUrlMobile = '/en/' + year + '/' + month + '/' + day + '/' + post.slug + '/';
+                } else {
+                  enUrlMobile = '/en/' + datePath + post.slug + '/';
+                }
+              } else {
+                if (post.date) {
+                  var d = post.date;
+                  var year = d.year? d.year() : d.getFullYear();
+                  var month = String(d.month? d.month() + 1 : d.getMonth() + 1).padStart(2, '0');
+                  var day = String(d.date? d.date() : d.getDate()).padStart(2, '0');
+                  zhUrlMobile = '/' + year + '/' + month + '/' + day + '/' + post.slug + '/';
+                } else {
+                  zhUrlMobile = '/' + datePath + post.slug + '/';
+                }
+              }
+            }
+          });
+          
+          if (zhUrlMobile === '/') {
+            zhUrlMobile = '/' + datePath + baseSlug + '/';
+          }
+          if (enUrlMobile === '/en/') {
+            enUrlMobile = '/en/' + datePath + baseSlug + '-en/';
+          }
+        %>
+        <a id="lang-switch-mobile" class="icon" href="<%= isEnglishMobile ? zhUrlMobile : enUrlMobile %>">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> <%= isEnglishMobile ? '中文' : 'EN' %>
+        </a>
         <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> <%= __('post.mobile.share') %></a>
         <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> <%= __('post.mobile.back_to_top') %></a>
     </div>

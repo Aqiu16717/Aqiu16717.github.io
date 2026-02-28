@@ -3,7 +3,21 @@
     <% var year = 0 %>
     <% var change = false %>
     <% var field_sort = theme.archive.sort_updated ? 'updated' : 'date' %>
-    <% page.posts.sort(field_sort, 'desc').each(function(post) { %>
+    <% 
+      // Use site.posts for all posts, filter by current page language
+      var currentLang = page.lang || 'zh-CN';
+      var postsToFilter = page.posts.length > 0 ? page.posts : site.posts;
+      var filteredPosts = postsToFilter.filter(function(post) {
+        var postLang = post.lang || 'zh-CN';
+        // Normalize language codes for comparison
+        var isCurrentZh = currentLang === 'zh-CN' || currentLang === 'zh';
+        var isPostZh = postLang === 'zh-CN' || postLang === 'zh';
+        var isCurrentEn = currentLang === 'en' || currentLang === 'en-US' || currentLang === 'en-GB';
+        var isPostEn = postLang === 'en' || postLang === 'en-US' || postLang === 'en-GB';
+        return (isCurrentZh && isPostZh) || (isCurrentEn && isPostEn);
+      });
+    %>
+    <% filteredPosts.sort(field_sort, 'desc').each(function(post) { %>
       <% var itemYear = date(post[field_sort], 'YYYY') %>
       <% change = year !== itemYear %>
       <% year = change ? itemYear : year %>

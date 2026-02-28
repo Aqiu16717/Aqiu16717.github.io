@@ -6,6 +6,7 @@ nav:
   tag: 标签
   category: 分类
   search: 搜索
+  rss: RSS订阅
   
 icons:
   menu: 目录

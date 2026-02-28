@@ -28,7 +28,79 @@
      --><li><a href="<%- url_for(theme.nav[i]) %>"><%= __('nav.'+i).replace("nav.", "") %></a></li><!--
    --><% } %>
       <!-- RSS订阅 -->
-      <li><a href="/atom.xml" target="_blank" title="RSS订阅"><i class="fa-solid fa-rss"></i></a></li>
+      <li><a href="/atom.xml" target="_blank" title="<%- __('nav.rss') %>"><i class="fa-solid fa-rss"></i></a></li>
+      <!-- 语言切换 -->
+      <%
+        // Determine current language
+        var isEnglish = (page.lang === 'en') || page.path.startsWith('en/');
+        
+        // Generate URLs for language switching
+        var zhUrl, enUrl;
+        
+        if (is_post()) {
+          // For posts, try to find the counterpart in another language
+          // by matching the date and slug pattern
+          var postSlug = page.slug || page.title;
+          var postDate = page.date;
+          
+          // Find matching post in other language
+          var matchingZhPost = null;
+          var matchingEnPost = null;
+          
+          site.posts.forEach(function(post) {
+            if (post.title === page.title) {
+              if (post.lang === 'en' || post.lang === 'en-US') {
+                matchingEnPost = post;
+              } else {
+                matchingZhPost = post;
+              }
+            }
+          });
+          
+          if (isEnglish) {
+            // Currently on English post, find Chinese version
+            if (matchingZhPost) {
+              zhUrl = matchingZhPost.permalink || '/' + matchingZhPost.path;
+            } else {
+              zhUrl = '/';
+            }
+            enUrl = page.permalink || '/' + page.path;
+          } else {
+            // Currently on Chinese post, find English version
+            zhUrl = page.permalink || '/' + page.path;
+            if (matchingEnPost) {
+              enUrl = matchingEnPost.permalink || '/' + matchingEnPost.path;
+            } else {
+              enUrl = '/en/';
+            }
+          }
+        } else {
+          // For pages (index, about, etc.)
+          var currentPathWithoutLang = page.path.replace(/^en\//, '');
+          zhUrl = '/' + currentPathWithoutLang;
+          enUrl = '/en/' + currentPathWithoutLang;
+          
+          // Handle index page specially
+          if (page.path === '' || page.path === 'index.html' || currentPathWithoutLang === 'index.html') {
+            zhUrl = '/';
+            enUrl = '/en/';
+          }
+        }
+        
+        // Ensure URLs don't have double slashes (except for protocol)
+        zhUrl = zhUrl.replace(/([^:])\/+/g, '$1/');
+        enUrl = enUrl.replace(/([^:])\/+/g, '$1/');
+      %>
+      <li class="lang-switch">
+        <a href="#" id="lang-toggle" title="<%= isEnglish ? 'Switch Language' : '切换语言' %>">
+          <i class="fa-solid fa-globe"></i>
+          <span class="lang-code"><%= isEnglish ? 'EN' : '中' %></span>
+        </a>
+        <ul class="lang-dropdown">
+          <li><a href="<%= zhUrl %>" class="<%= !isEnglish ? 'active' : '' %>">中文</a></li>
+          <li><a href="<%= enUrl %>" class="<%= isEnglish ? 'active' : '' %>">English</a></li>
+        </ul>
+      </li>
     </ul>
   </div>
 </header>

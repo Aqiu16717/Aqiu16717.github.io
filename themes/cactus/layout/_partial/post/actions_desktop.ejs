@@ -8,6 +8,78 @@
         <% for (var i in theme.nav) { %><!--
        --><li><a href="<%- url_for(theme.nav[i]) %>"><%= __('nav.'+i).replace("nav.", "") %></a></li><!--
      --><% } %>
+        <!-- 语言切换 -->
+        <%
+          // Determine current language
+          var isEnglish = (page.lang === 'en') || page.path.startsWith('en/');
+          
+          // For posts, find the counterpart in another language by matching slug pattern
+          var currentSlug = page.slug || '';
+          var baseSlug = currentSlug.replace(/-en$/, '');
+          
+          var zhUrl = '/';
+          var enUrl = '/en/';
+          
+          // Build URLs based on date
+          var datePath = '';
+          if (page.date) {
+            var d = page.date;
+            var year = d.year? d.year() : d.getFullYear();
+            var month = String(d.month? d.month() + 1 : d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.date? d.date() : d.getDate()).padStart(2, '0');
+            datePath = year + '/' + month + '/' + day + '/';
+          }
+          
+          // Find matching posts
+          site.posts.forEach(function(post) {
+            var postSlug = post.slug || '';
+            var postBaseSlug = postSlug.replace(/-en$/, '');
+            
+            if (postBaseSlug === baseSlug) {
+              if (post.lang === 'en' || post.lang === 'en-US') {
+                // Build English URL
+                if (post.date) {
+                  var d = post.date;
+                  var year = d.year? d.year() : d.getFullYear();
+                  var month = String(d.month? d.month() + 1 : d.getMonth() + 1).padStart(2, '0');
+                  var day = String(d.date? d.date() : d.getDate()).padStart(2, '0');
+                  enUrl = '/en/' + year + '/' + month + '/' + day + '/' + post.slug + '/';
+                } else {
+                  enUrl = '/en/' + datePath + post.slug + '/';
+                }
+              } else {
+                // Build Chinese URL
+                if (post.date) {
+                  var d = post.date;
+                  var year = d.year? d.year() : d.getFullYear();
+                  var month = String(d.month? d.month() + 1 : d.getMonth() + 1).padStart(2, '0');
+                  var day = String(d.date? d.date() : d.getDate()).padStart(2, '0');
+                  zhUrl = '/' + year + '/' + month + '/' + day + '/' + post.slug + '/';
+                } else {
+                  zhUrl = '/' + datePath + post.slug + '/';
+                }
+              }
+            }
+          });
+          
+          // If no matching post found, use current page URL with language switch
+          if (zhUrl === '/') {
+            zhUrl = '/' + datePath + baseSlug + '/';
+          }
+          if (enUrl === '/en/') {
+            enUrl = '/en/' + datePath + baseSlug + '-en/';
+          }
+        %>
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="<%= isEnglish ? 'Switch Language' : '切换语言' %>">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code"><%= isEnglish ? 'EN' : '中' %></span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="<%= zhUrl %>" class="<%= !isEnglish ? 'active' : '' %>">中文</a></li>
+            <li><a href="<%= enUrl %>" class="<%= isEnglish ? 'active' : '' %>">English</a></li>
+          </ul>
+        </li>
       </ul>
     </span>
     <br/>

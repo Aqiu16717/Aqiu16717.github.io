@@ -2,8 +2,13 @@
     <%- partial('_partial/post/gallery') %>
     <div class="content" itemprop="articleBody">
         <% if (theme.error_404.enabled && theme.error_404.title && theme.error_404.description ) { %>
-            <h1><%= theme.error_404.title %></h1>
-            <p><%= theme.error_404.description %></p>
+            <% 
+              var currentLang = page.lang || 'zh-CN';
+              var title = theme.error_404.title[currentLang] || theme.error_404.title;
+              var desc = theme.error_404.description[currentLang] || theme.error_404.description;
+            %>
+            <h1><%= title %></h1>
+            <p><%= desc %></p>
         <% } %>
     </div>
 </article>

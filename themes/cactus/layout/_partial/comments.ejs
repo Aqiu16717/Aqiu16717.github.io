@@ -25,7 +25,11 @@
             data-emit-metadata="<%= theme.giscus.emit_metadata || '0' %>"
             data-input-position="<%= theme.giscus.input_position || 'bottom' %>"
             data-theme="<%= theme.giscus.theme || 'preferred_color_scheme' %>"
-            data-lang="<%= theme.giscus.lang || 'zh-CN' %>"
+<% var giscusLang = theme.giscus.lang || 'zh-CN'; %>
+            <% if (typeof giscusLang === 'object') { %>
+            <%   giscusLang = giscusLang[page.lang || 'zh-CN'] || 'zh-CN'; %>
+            <% } %>
+            data-lang="<%= giscusLang %>"
             crossorigin="anonymous"
             async>
         </script>
