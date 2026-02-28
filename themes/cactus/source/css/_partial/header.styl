@@ -69,6 +69,139 @@
         a
           margin-right: 0
 
+      // Language switcher styles
+      li.lang-switch
+        position: relative
+        display: inline-block
+        border-right: 1px dotted $color-accent-1
+
+        a
+          display: flex
+          align-items: center
+          gap: 5px
+
+          .lang-code
+            font-size: 0.7rem
+            font-weight: 600
+
+        .lang-dropdown
+          opacity: 0
+          visibility: hidden
+          transform: translateY(-10px)
+          transition: all 0.2s ease-in-out
+          position: absolute
+          top: 100%
+          right: 0
+          margin-top: 5px
+          padding: 5px 0
+          min-width: 100px
+          background: $color-background
+          border: 1px solid $color-border
+          border-radius: 4px
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15)
+          z-index: 1000
+
+          li
+            display: block
+            margin: 0
+            padding: 0
+            border-right: none
+
+            a
+              display: block
+              padding: 8px 15px
+              margin: 0
+              color: $color-text
+              font-size: 0.8rem
+              white-space: nowrap
+              transition: background 0.15s ease
+
+              &:hover
+                background: rgba($color-accent-1, 0.1)
+                text-decoration: none
+
+              &.active
+                color: $color-accent-1
+                font-weight: 600
+
+        &:hover
+          .lang-dropdown
+            opacity: 1
+            visibility: visible
+            transform: translateY(0)
+
+        // Support for click toggle
+        .lang-dropdown.show
+          opacity: 1
+          visibility: visible
+          transform: translateY(0)
+
+// Language switcher for post pages (desktop)
+#header-post
+  #nav
+    .lang-switch
+      position: relative
+      display: inline-block
+
+      a
+        display: flex
+        align-items: center
+        gap: 5px
+
+        .lang-code
+          font-size: 0.7rem
+          font-weight: 600
+          color: $color-accent-1
+
+      .lang-dropdown
+        display: none
+        position: absolute
+        top: 100%
+        right: 0
+        margin-top: 5px
+        padding: 5px 0
+        min-width: 100px
+        background: $color-background
+        border: 1px solid $color-border
+        border-radius: 4px
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15)
+        z-index: 1000
+
+        li
+          display: block
+          margin: 0
+          padding: 0
+          border-right: none
+
+          a
+            display: block
+            padding: 8px 15px
+            margin: 0
+            color: $color-text
+            font-size: 0.8rem
+            white-space: nowrap
+
+            &:hover
+              background: rgba($color-accent-1, 0.1)
+              text-decoration: none
+
+            &.active
+              color: $color-accent-1
+              font-weight: 600
+
+      &:hover
+        .lang-dropdown
+          display: block
+
+// Mobile language switcher
+#footer-post
+  #actions-footer
+    #lang-switch-mobile
+      font-size: 0.8rem
+      
+      i
+        margin-right: 3px
+
 if $logo-grayout
   #header:hover
     #logo
@@ -103,8 +236,24 @@ if $logo-grayout
     ul.responsive
       li
         display: block
-    
-    ul 
+
+      li.lang-switch
+        .lang-dropdown
+          display: block
+          position: static
+          margin-top: 10px
+          border: none
+          box-shadow: none
+          background: transparent
+
+          li
+            padding: 0
+            display: block
+
+            a
+              padding: 5px 0
+
+    ul
       a[aria-label="Menu"]
         display: inline-block
         min-width: 48px
