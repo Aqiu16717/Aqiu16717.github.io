@@ -2,6 +2,7 @@
 title: InnoDB中B-tree(B+ tree)的加锁策略
 date: 2025-11-12 22:35:51
 tags: innodb, B tree, B+ tree
+lang: zh-CN
 ---
 
 此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。
