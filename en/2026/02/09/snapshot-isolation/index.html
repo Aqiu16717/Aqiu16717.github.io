@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="Snapshot IsolationSnapshot Isolation is a transaction isolation level used by databases for concurrency control. It allows transactions to work with a consistent snapshot of the database, providing a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Understanding Snapshot Isolation Level">
+<meta property="og:url" content="https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html">
+<meta property="og:site_name" content="aq1u&#39;s blog">
+<meta property="og:description" content="Snapshot IsolationSnapshot Isolation is a transaction isolation level used by databases for concurrency control. It allows transactions to work with a consistent snapshot of the database, providing a">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-02-09T15:30:00.000Z">
+<meta property="article:modified_time" content="2026-02-27T15:51:09.782Z">
+<meta property="article:author" content="aq1u">
+<meta property="article:tag" content="MVCC">
+<meta property="article:tag" content="concurrency control">
+<meta property="article:tag" content="database">
+<meta property="article:tag" content="isolation level">
+<meta property="article:tag" content="transaction">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>Understanding Snapshot Isolation Level</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.0.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="Menu"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="Menu"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="Top" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Writing</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">Projects</a></li><!--
+     -->
+        <!-- 语言切换 -->
+        
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="Switch Language">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code">EN</span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="/2026/02/09/snapshot-isolation/" class="">中文</a></li>
+            <li><a href="/en/2026/02/09/snapshot-isolation-en/" class="active">English</a></li>
+          </ul>
+        </li>
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="Next post" href="/2026/02/09/snapshot-isolation/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="Back to top" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="Share post" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&text=Understanding Snapshot Isolation Level"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&is_video=false&description=Understanding Snapshot Isolation Level"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Understanding Snapshot Isolation Level&body=Check out this article: https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&name=Understanding Snapshot Isolation Level&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&t=Understanding Snapshot Isolation Level"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Snapshot-Isolation"><span class="toc-number">1.</span> <span class="toc-text">Snapshot Isolation</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Implementation"><span class="toc-number">1.1.</span> <span class="toc-text">Implementation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#What-is-MVCC"><span class="toc-number">1.1.1.</span> <span class="toc-text">What is MVCC?</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Read-Operations"><span class="toc-number">1.2.</span> <span class="toc-text">Read Operations</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Write-Operations"><span class="toc-number">1.3.</span> <span class="toc-text">Write Operations</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Read-Write-Conflicts"><span class="toc-number">1.3.1.</span> <span class="toc-text">Read-Write Conflicts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Write-Write-Conflicts"><span class="toc-number">1.3.2.</span> <span class="toc-text">Write-Write Conflicts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Concurrency-Control-Methods"><span class="toc-number">1.3.3.</span> <span class="toc-text">Concurrency Control Methods</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Known-Issues"><span class="toc-number">1.4.</span> <span class="toc-text">Known Issues</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phantom-Read"><span class="toc-number">1.4.1.</span> <span class="toc-text">Phantom Read</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Write-Skew"><span class="toc-number">1.4.2.</span> <span class="toc-text">Write Skew</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Two-Phase-Locking-2PL"><span class="toc-number">1.5.</span> <span class="toc-text">Two-Phase Locking (2PL)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Expanding-Phase"><span class="toc-number">1.5.1.</span> <span class="toc-text">Expanding Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Shrinking-Phase"><span class="toc-number">1.5.2.</span> <span class="toc-text">Shrinking Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Lock-Types"><span class="toc-number">1.5.3.</span> <span class="toc-text">Lock Types</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Comparison-with-Other-Isolation-Levels"><span class="toc-number">1.6.</span> <span class="toc-text">Comparison with Other Isolation Levels</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#References"><span class="toc-number">1.7.</span> <span class="toc-text">References</span></a></li></ol></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        Understanding Snapshot Isolation Level
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">aq1u</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2026-02-09T15:30:00.000Z" class="dt-published" itemprop="datePublished">2026-02-09</time>
+        
+        (Updated: <time datetime="2026-02-27T15:51:09.782Z" class="dt-updated" itemprop="dateModified">2026-02-27</time>)
+        
+      
+    </div>
+
+
+      
+    <div class="article-category">
+        <i class="fa-solid fa-archive"></i>
+        <a class="category-link" href="/categories/database/">database</a>
+    </div>
+
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/MVCC/" rel="tag">MVCC</a>, <a class="p-category" href="/tags/concurrency-control/" rel="tag">concurrency control</a>, <a class="p-category" href="/tags/database/" rel="tag">database</a>, <a class="p-category" href="/tags/isolation-level/" rel="tag">isolation level</a>, <a class="p-category" href="/tags/transaction/" rel="tag">transaction</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <h1 id="Snapshot-Isolation"><a href="#Snapshot-Isolation" class="headerlink" title="Snapshot Isolation"></a>Snapshot Isolation</h1><p><strong>Snapshot Isolation</strong> is a transaction isolation level used by databases for concurrency control. It allows transactions to work with a consistent snapshot of the database, providing a balance between consistency and concurrency.</p>
+<h2 id="Implementation"><a href="#Implementation" class="headerlink" title="Implementation"></a>Implementation</h2><p>Snapshot isolation is implemented through <strong>MVCC</strong> (Multi-Version Concurrency Control).</p>
+<h3 id="What-is-MVCC"><a href="#What-is-MVCC" class="headerlink" title="What is MVCC?"></a>What is MVCC?</h3><p>MVCC stands for Multi-Version Concurrency Control. It maintains multiple versions of data items to allow readers to access data without blocking writers, and vice versa.</p>
+<h2 id="Read-Operations"><a href="#Read-Operations" class="headerlink" title="Read Operations"></a>Read Operations</h2><ul>
+<li><strong>Snapshot Read</strong>: Does not use locking mechanisms. Reads are based on a snapshot of the database at the time the transaction started.</li>
+</ul>
+<h2 id="Write-Operations"><a href="#Write-Operations" class="headerlink" title="Write Operations"></a>Write Operations</h2><h3 id="Read-Write-Conflicts"><a href="#Read-Write-Conflicts" class="headerlink" title="Read-Write Conflicts"></a>Read-Write Conflicts</h3><p>Read and write operations do not conflict with each other. Read operations are based on the snapshot at the start of the transaction and will not block write operations.</p>
+<h3 id="Write-Write-Conflicts"><a href="#Write-Write-Conflicts" class="headerlink" title="Write-Write Conflicts"></a>Write-Write Conflicts</h3><p>Only one transaction can commit successfully; the other transaction will be rolled back. Conflict detection is performed at commit time to check if other concurrent transactions have modified the same data.</p>
+<h3 id="Concurrency-Control-Methods"><a href="#Concurrency-Control-Methods" class="headerlink" title="Concurrency Control Methods"></a>Concurrency Control Methods</h3><p><strong>Optimistic Concurrency Control</strong></p>
+<ul>
+<li>Conflict detection is performed at commit time</li>
+<li>If a conflict is detected, the transaction is rolled back and retried</li>
+<li>The write-write conflict control in snapshot isolation belongs to this category</li>
+</ul>
+<p><strong>Pessimistic Concurrency Control</strong></p>
+<ul>
+<li>Write operations first acquire locks on resources, then perform operations</li>
+<li>Lock waiting issues exist, requiring timeout handling</li>
+<li>Deadlock issues exist, requiring deadlock detection</li>
+</ul>
+<h2 id="Known-Issues"><a href="#Known-Issues" class="headerlink" title="Known Issues"></a>Known Issues</h2><h3 id="Phantom-Read"><a href="#Phantom-Read" class="headerlink" title="Phantom Read"></a>Phantom Read</h3><p>A transaction re-executes a query returning a set of rows that satisfy a search condition and finds that the set has changed due to another recently-committed transaction.</p>
+<h3 id="Write-Skew"><a href="#Write-Skew" class="headerlink" title="Write Skew"></a>Write Skew</h3><p>Two concurrent transactions read the same data, modify disjoint sets of data, and both commit successfully, violating a constraint that should have been maintained.</p>
+<h2 id="Two-Phase-Locking-2PL"><a href="#Two-Phase-Locking-2PL" class="headerlink" title="Two-Phase Locking (2PL)"></a>Two-Phase Locking (2PL)</h2><p>2PL is a pessimistic concurrency control method that guarantees conflict serializability. Lock acquisition and release are divided into two phases:</p>
+<h3 id="Expanding-Phase"><a href="#Expanding-Phase" class="headerlink" title="Expanding Phase"></a>Expanding Phase</h3><ul>
+<li>Transactions can acquire locks but cannot release them</li>
+</ul>
+<h3 id="Shrinking-Phase"><a href="#Shrinking-Phase" class="headerlink" title="Shrinking Phase"></a>Shrinking Phase</h3><ul>
+<li>Transactions can release locks but cannot acquire new ones</li>
+<li>Once a transaction starts releasing locks, it enters the shrinking phase and cannot acquire any more locks</li>
+</ul>
+<h3 id="Lock-Types"><a href="#Lock-Types" class="headerlink" title="Lock Types"></a>Lock Types</h3><p><strong>Shared Lock (S Lock &#x2F; Read Lock)</strong></p>
+<ul>
+<li>Allows multiple transactions to read data simultaneously without writing</li>
+<li>When a data item is locked in shared mode, other transactions can also request shared locks but cannot request exclusive locks</li>
+</ul>
+<p><strong>Exclusive Lock (X Lock &#x2F; Write Lock)</strong></p>
+<ul>
+<li>Allows a transaction to read and write data</li>
+<li>When a data item is locked in exclusive mode, other transactions cannot request any type of lock</li>
+</ul>
+<h2 id="Comparison-with-Other-Isolation-Levels"><a href="#Comparison-with-Other-Isolation-Levels" class="headerlink" title="Comparison with Other Isolation Levels"></a>Comparison with Other Isolation Levels</h2><table>
+<thead>
+<tr>
+<th>Isolation Level</th>
+<th>Dirty Read</th>
+<th>Non-Repeatable Read</th>
+<th>Phantom Read</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Read Uncommitted</td>
+<td>Possible</td>
+<td>Possible</td>
+<td>Possible</td>
+</tr>
+<tr>
+<td>Read Committed</td>
+<td>Not Possible</td>
+<td>Possible</td>
+<td>Possible</td>
+</tr>
+<tr>
+<td>Repeatable Read</td>
+<td>Not Possible</td>
+<td>Not Possible</td>
+<td>Possible</td>
+</tr>
+<tr>
+<td>Snapshot Isolation</td>
+<td>Not Possible</td>
+<td>Not Possible</td>
+<td>Possible</td>
+</tr>
+<tr>
+<td>Serializable</td>
+<td>Not Possible</td>
+<td>Not Possible</td>
+<td>Not Possible</td>
+</tr>
+</tbody></table>
+<h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://docs.pingcap.com/zh/tidb/stable/transaction-isolation-levels">TiDB Transaction Isolation Levels</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.pingcap.com/zh/tidb/stable/pessimistic-transaction">TiDB Pessimistic Transaction</a></li>
+<li>“Designing Data-Intensive Applications” by Martin Kleppmann</li>
+</ul>
+
+  </div>
+</article>
+
+
+
+    <div class="blog-post-comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="Aqiu16717/Aqiu16717.github.io"
+            data-repo-id="R_kgDOHKvpgw"
+            data-category="Announcements"
+            data-category-id="DIC_kwDOHKvpg84C1uo1"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="preferred_color_scheme"
+
+            
+            
+            
+            data-lang="en"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">Home</a></li>
+        
+          <li><a href="/about/">About</a></li>
+        
+          <li><a href="/archives/">Writing</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">Projects</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Snapshot-Isolation"><span class="toc-number">1.</span> <span class="toc-text">Snapshot Isolation</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Implementation"><span class="toc-number">1.1.</span> <span class="toc-text">Implementation</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#What-is-MVCC"><span class="toc-number">1.1.1.</span> <span class="toc-text">What is MVCC?</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Read-Operations"><span class="toc-number">1.2.</span> <span class="toc-text">Read Operations</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Write-Operations"><span class="toc-number">1.3.</span> <span class="toc-text">Write Operations</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Read-Write-Conflicts"><span class="toc-number">1.3.1.</span> <span class="toc-text">Read-Write Conflicts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Write-Write-Conflicts"><span class="toc-number">1.3.2.</span> <span class="toc-text">Write-Write Conflicts</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Concurrency-Control-Methods"><span class="toc-number">1.3.3.</span> <span class="toc-text">Concurrency Control Methods</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Known-Issues"><span class="toc-number">1.4.</span> <span class="toc-text">Known Issues</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phantom-Read"><span class="toc-number">1.4.1.</span> <span class="toc-text">Phantom Read</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Write-Skew"><span class="toc-number">1.4.2.</span> <span class="toc-text">Write Skew</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Two-Phase-Locking-2PL"><span class="toc-number">1.5.</span> <span class="toc-text">Two-Phase Locking (2PL)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Expanding-Phase"><span class="toc-number">1.5.1.</span> <span class="toc-text">Expanding Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Shrinking-Phase"><span class="toc-number">1.5.2.</span> <span class="toc-text">Shrinking Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Lock-Types"><span class="toc-number">1.5.3.</span> <span class="toc-text">Lock Types</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Comparison-with-Other-Isolation-Levels"><span class="toc-number">1.6.</span> <span class="toc-text">Comparison with Other Isolation Levels</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#References"><span class="toc-number">1.7.</span> <span class="toc-text">References</span></a></li></ol></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&text=Understanding Snapshot Isolation Level"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&is_video=false&description=Understanding Snapshot Isolation Level"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Understanding Snapshot Isolation Level&body=Check out this article: https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&title=Understanding Snapshot Isolation Level"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&name=Understanding Snapshot Isolation Level&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html&t=Understanding Snapshot Isolation Level"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        
+        <!-- 语言切换 -->
+        
+        <a id="lang-switch-mobile" class="icon" href="/2026/02/09/snapshot-isolation/">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> 中文
+        </a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> Share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-center">
+    Copyright &copy;
+    
+    
+    2024-2026
+    aq1u
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+ 
+  <link
+    rel="preload"
+    href="/lib/font-awesome/css/all.min.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="/lib/font-awesome/css/all.min.css"
+  /></noscript>
+
+
+    <!-- jquery -->
+
+  
+<script src="/lib/jquery/jquery.min.js"></script>
+
+
+
+
+
+<!-- clipboard -->
+
+  
+    
+<script src="/lib/clipboard/clipboard.min.js"></script>
+
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"Copy to clipboard!\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "Copied!");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>

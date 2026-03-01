@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang=zh>
+
+<html lang="zh">
 <head>
     <!-- so meta -->
     <meta charset="utf-8">
@@ -8,12 +9,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <meta name="description" content="个人技术博客，分享编程、数据库、分布式系统等技术文章">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Aqiu&#39;s Blog">
+<meta property="og:title" content="aq1u&#39;s blog">
 <meta property="og:url" content="https://aqiu16717.github.io/404.html">
-<meta property="og:site_name" content="Aqiu&#39;s Blog">
+<meta property="og:site_name" content="aq1u&#39;s blog">
 <meta property="og:description" content="个人技术博客，分享编程、数据库、分布式系统等技术文章">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:author" content="Aqiu">
+<meta property="article:author" content="aq1u">
 <meta property="article:tag" content="编程, 技术, 博客, MySQL, Go, 分布式系统">
 <meta name="twitter:card" content="summary">
     
@@ -35,7 +36,7 @@
       
     
     <!-- title -->
-    <title>Aqiu&#39;s Blog</title>
+    <title>aq1u&#39;s blog</title>
     <!-- async scripts -->
     <!-- Google Analytics -->
 
@@ -52,7 +53,7 @@
     <!-- rss -->
     
     
-      <link rel="alternate" href="/atom.xml" title="Aqiu&#39;s Blog" type="application/atom+xml" />
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
     
 	<!-- mathjax -->
 	
@@ -70,7 +71,7 @@
     
   
     <div id="title">
-      <h1 class="p-name">Aqiu&#39;s Blog</h1>
+      <h1 class="p-name">aq1u&#39;s blog</h1>
     </div>
   </a>
   <div id="nav">
@@ -89,6 +90,18 @@
    -->
       <!-- RSS订阅 -->
       <li><a href="/atom.xml" target="_blank" title="RSS订阅"><i class="fa-solid fa-rss"></i></a></li>
+      <!-- 语言切换 -->
+      
+      <li class="lang-switch">
+        <a href="#" id="lang-toggle" title="切换语言">
+          <i class="fa-solid fa-globe"></i>
+          <span class="lang-code">中</span>
+        </a>
+        <ul class="lang-dropdown">
+          <li><a href="/404.html" class="active">中文</a></li>
+          <li><a href="/en/404.html" class="">English</a></li>
+        </ul>
+      </li>
     </ul>
   </div>
 </header>
@@ -99,6 +112,7 @@
 
     <div class="content" itemprop="articleBody">
         
+            
             <h1>404 - 页面未找到</h1>
             <p>抱歉，您访问的页面不存在或已被移除。</p>
         
@@ -111,7 +125,7 @@
     
     
     2024-2026
-    Aqiu
+    aq1u
   </div>
 </footer>
 
@@ -147,6 +161,46 @@
 
 <script src="/js/main.js"></script>
 
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
 <!-- search -->
 
 <!-- Baidu Analytics -->

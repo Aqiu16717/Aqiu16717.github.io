@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang=zh>
+
+<html lang="zh">
 <head>
     <!-- so meta -->
     <meta charset="utf-8">
@@ -10,12 +11,12 @@
 <meta property="og:type" content="article">
 <meta property="og:title" content="InnoDB中B-tree(B+ tree)的加锁策略">
 <meta property="og:url" content="https://aqiu16717.github.io/2025/11/12/innodb/index.html">
-<meta property="og:site_name" content="Aqiu&#39;s Blog">
+<meta property="og:site_name" content="aq1u&#39;s blog">
 <meta property="og:description" content="此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。 为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nod">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2025-11-12T14:35:51.000Z">
-<meta property="article:modified_time" content="2026-02-01T15:41:26.887Z">
-<meta property="article:author" content="Aqiu">
+<meta property="article:modified_time" content="2026-02-27T15:46:56.949Z">
+<meta property="article:author" content="aq1u">
 <meta property="article:tag" content="innodb, B tree, B+ tree">
 <meta name="twitter:card" content="summary">
     
@@ -54,7 +55,7 @@
     <!-- rss -->
     
     
-      <link rel="alternate" href="/atom.xml" title="Aqiu&#39;s Blog" type="application/atom+xml" />
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
     
 	<!-- mathjax -->
 	
@@ -78,13 +79,25 @@
      --><!--
        --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
      -->
+        <!-- 语言切换 -->
+        
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="切换语言">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code">中</span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="/2025/11/12/innodb/" class="active">中文</a></li>
+            <li><a href="/en/2025/11/12/innodb-en/" class="">English</a></li>
+          </ul>
+        </li>
       </ul>
     </span>
     <br/>
     <span id="actions">
       <ul>
         
-        <li><a class="icon" aria-label="上一篇" href="/2026/02/09/snapshot-isolation/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="上一篇" href="/en/2025/11/12/innodb/index.html"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
         
         
         <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
@@ -131,14 +144,14 @@
 
     <div class="meta">
       <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
-        <span class="p-name" itemprop="name">Aqiu</span>
+        <span class="p-name" itemprop="name">aq1u</span>
       </span>
       
     <div class="postdate">
       
         <time datetime="2025-11-12T14:35:51.000Z" class="dt-published" itemprop="datePublished">2025-11-12</time>
         
-        (Updated: <time datetime="2026-02-01T15:41:26.887Z" class="dt-updated" itemprop="dateModified">2026-02-01</time>)
+        (Updated: <time datetime="2026-02-27T15:46:56.949Z" class="dt-updated" itemprop="dateModified">2026-02-27</time>)
         
       
     </div>
@@ -180,6 +193,10 @@
             data-emit-metadata="0"
             data-input-position="bottom"
             data-theme="preferred_color_scheme"
+
+            
+            
+            
             data-lang="zh-CN"
             crossorigin="anonymous"
             async>
@@ -228,6 +245,11 @@
     <div id="actions-footer">
         <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
         
+        <!-- 语言切换 -->
+        
+        <a id="lang-switch-mobile" class="icon" href="/en/2025/11/12/innodb-en/">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> EN
+        </a>
         <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
         <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
     </div>
@@ -242,7 +264,7 @@
     
     
     2024-2026
-    Aqiu
+    aq1u
   </div>
 </footer>
 
@@ -303,6 +325,46 @@
 
 <script src="/js/main.js"></script>
 
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
 <!-- search -->
 
 <!-- Baidu Analytics -->
