@@ -1,27 +1,22 @@
 <!DOCTYPE html>
-
-<html lang="en">
+<html lang=zh>
 <head>
     <!-- so meta -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="HandheldFriendly" content="True">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-    <meta name="description" content="The locks here are divided into two levels: the tree-level lock called tree latch, and the node-level lock called node latch. The tree latch protects all non-leaf nodes, while the node latch naturally">
+    <meta name="description" content="此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。 为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nod">
 <meta property="og:type" content="article">
-<meta property="og:title" content="InnoDB B-tree (B+ tree) Locking Strategy">
+<meta property="og:title" content="InnoDB中B-tree(B+ tree)的加锁策略">
 <meta property="og:url" content="https://aqiu16717.github.io/2025/11/12/innodb/index.html">
-<meta property="og:site_name" content="aq1u&#39;s blog">
-<meta property="og:description" content="The locks here are divided into two levels: the tree-level lock called tree latch, and the node-level lock called node latch. The tree latch protects all non-leaf nodes, while the node latch naturally">
-<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="Aqiu&#39;s Blog">
+<meta property="og:description" content="此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。 为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nod">
+<meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2025-11-12T14:35:51.000Z">
-<meta property="article:modified_time" content="2026-03-08T07:46:53.944Z">
-<meta property="article:author" content="aq1u">
-<meta property="article:tag" content="B tree">
-<meta property="article:tag" content="B+ tree">
-<meta property="article:tag" content="database">
-<meta property="article:tag" content="innodb">
-<meta property="article:tag" content="mysql">
+<meta property="article:modified_time" content="2026-03-08T10:21:12.512Z">
+<meta property="article:author" content="Aqiu">
+<meta property="article:tag" content="innodb, B tree, B+ tree">
 <meta name="twitter:card" content="summary">
     
     
@@ -42,7 +37,7 @@
       
     
     <!-- title -->
-    <title>InnoDB B-tree (B+ tree) Locking Strategy</title>
+    <title>InnoDB中B-tree(B+ tree)的加锁策略</title>
     <!-- async scripts -->
     <!-- Google Analytics -->
 
@@ -59,7 +54,7 @@
     <!-- rss -->
     
     
-      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
+      <link rel="alternate" href="/atom.xml" title="Aqiu&#39;s Blog" type="application/atom+xml" />
     
 	<!-- mathjax -->
 	
@@ -68,74 +63,56 @@
 <body class="max-width mx-auto px3 ltr">
     
       <div id="header-post">
-  <a id="menu-icon" href="#" aria-label="Menu"><i class="fa-solid fa-bars fa-lg"></i></a>
-  <a id="menu-icon-tablet" href="#" aria-label="Menu"><i class="fa-solid fa-bars fa-lg"></i></a>
-  <a id="top-icon-tablet" href="#" aria-label="Top" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
   <span id="menu">
     <span id="nav">
       <ul>
-
         <!--
-       --><li><a href="/">Home</a></li><!--
+       --><li><a href="/">首页</a></li><!--
      --><!--
-       --><li><a href="/about/">About</a></li><!--
+       --><li><a href="/about/">关于</a></li><!--
      --><!--
-       --><li><a href="/archives/">Writing</a></li><!--
+       --><li><a href="/archives/">归档</a></li><!--
      --><!--
-       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">Projects</a></li><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
      -->
-        <!-- 语言切换 -->
-        
-        <li class="lang-switch">
-          <a href="#" id="lang-toggle" title="Switch Language">
-            <i class="fa-solid fa-globe"></i>
-            <span class="lang-code">EN</span>
-          </a>
-          <ul class="lang-dropdown">
-            <li><a href="/zh/2025/11/12/innodb-zh/" class="">中文</a></li>
-            <li><a href="/2025/11/12/innodb/" class="active">English</a></li>
-          </ul>
-        </li>
       </ul>
     </span>
     <br/>
     <span id="actions">
       <ul>
         
+        <li><a class="icon" aria-label="上一篇" href="/2026/02/09/snapshot-isolation/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
         
-        <li><a class="icon" aria-label="Previous post" href="/2025/11/12/innodb-zh/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
         
-        
-        <li><a class="icon" aria-label="Back to top" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
-        <li><a class="icon" aria-label="Share post" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
       </ul>
-      <span id="i-prev" class="info" style="display:none;">Previous post</span>
-      <span id="i-next" class="info" style="display:none;">Next post</span>
-      <span id="i-top" class="info" style="display:none;">Back to top</span>
-      <span id="i-share" class="info" style="display:none;">Share post</span>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
     </span>
     <br/>
     <div id="share" style="display: none">
       <ul>
   <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2025/11/12/innodb/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2025/11/12/innodb/&text=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2025/11/12/innodb/&is_video=false&description=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
-  <li><a class="icon" href="mailto:?subject=InnoDB B-tree (B+ tree) Locking Strategy&body=Check out this article: https://aqiu16717.github.io/2025/11/12/innodb/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2025/11/12/innodb/&name=InnoDB B-tree (B+ tree) Locking Strategy&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2025/11/12/innodb/&t=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2025/11/12/innodb/&text=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2025/11/12/innodb/&is_video=false&description=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=InnoDB中B-tree(B+ tree)的加锁策略&body=Check out this article: https://aqiu16717.github.io/2025/11/12/innodb/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2025/11/12/innodb/&name=InnoDB中B-tree(B+ tree)的加锁策略&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2025/11/12/innodb/&t=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
 </ul>
 
     </div>
     
-    
-      <div id="toc">
-        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Why-Tree-Latch-Only-Protects-Non-Leaf-Nodes"><span class="toc-number">1.</span> <span class="toc-text">Why Tree Latch Only Protects Non-Leaf Nodes?</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Lock-Acquisition-Process"><span class="toc-number">2.</span> <span class="toc-text">Lock Acquisition Process</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Tree-Structure-Modifications"><span class="toc-number">3.</span> <span class="toc-text">Tree Structure Modifications</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Reference"><span class="toc-number">4.</span> <span class="toc-text">Reference</span></a></li></ol>
-      </div>
     
   </span>
 </div>
@@ -147,21 +124,21 @@
   <header>
     
     <h1 class="posttitle p-name" itemprop="name headline">
-        InnoDB B-tree (B+ tree) Locking Strategy
+        InnoDB中B-tree(B+ tree)的加锁策略
     </h1>
 
 
 
     <div class="meta">
       <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
-        <span class="p-name" itemprop="name">aq1u</span>
+        <span class="p-name" itemprop="name">Aqiu</span>
       </span>
       
     <div class="postdate">
       
         <time datetime="2025-11-12T14:35:51.000Z" class="dt-published" itemprop="datePublished">2025-11-12</time>
         
-        (Updated: <time datetime="2026-03-08T07:46:53.944Z" class="dt-updated" itemprop="dateModified">2026-03-08</time>)
+        (Updated: <time datetime="2026-03-08T10:21:12.512Z" class="dt-updated" itemprop="dateModified">2026-03-08</time>)
         
       
     </div>
@@ -172,7 +149,7 @@
       
     <div class="article-tag">
         <i class="fa-solid fa-tag"></i>
-        <a class="p-category" href="/tags/B-tree/" rel="tag">B tree</a>, <a class="p-category" href="/tags/B-tree/" rel="tag">B+ tree</a>, <a class="p-category" href="/tags/database/" rel="tag">database</a>, <a class="p-category" href="/tags/innodb/" rel="tag">innodb</a>, <a class="p-category" href="/tags/mysql/" rel="tag">mysql</a>
+        <a class="p-category" href="/tags/innodb-B-tree-B-tree/" rel="tag">innodb, B tree, B+ tree</a>
     </div>
 
 
@@ -181,22 +158,10 @@
   
 
   <div class="content e-content" itemprop="articleBody">
-    <p>The locks here are divided into two levels: the tree-level lock called <strong>tree latch</strong>, and the node-level lock called <strong>node latch</strong>. The tree latch protects all non-leaf nodes, while the node latch naturally protects the node itself.</p>
-<h2 id="Why-Tree-Latch-Only-Protects-Non-Leaf-Nodes"><a href="#Why-Tree-Latch-Only-Protects-Non-Leaf-Nodes" class="headerlink" title="Why Tree Latch Only Protects Non-Leaf Nodes?"></a>Why Tree Latch Only Protects Non-Leaf Nodes?</h2><p>In a B+ tree, leaf nodes store actual data and have high access frequency. If the tree latch included leaf nodes in its protection scope, it would be more prone to trigger lock contention and reduce concurrency performance. From the perspective of non-leaf nodes, in a B+ tree, non-leaf nodes store pointers to child nodes. Protecting non-leaf nodes essentially means protecting the tree structure.</p>
-<h2 id="Lock-Acquisition-Process"><a href="#Lock-Acquisition-Process" class="headerlink" title="Lock Acquisition Process"></a>Lock Acquisition Process</h2><p>When operating on a B-tree, you typically first acquire the tree latch in shared mode (tree-latch-s), which ensures the tree structure won’t be modified. Then you traverse the tree from top to bottom to find the target leaf node and lock it (node-latch). During the process of finding the leaf node, non-leaf nodes are not locked, which saves CPU time—you only need to ensure the corresponding data pages won’t be swapped out of memory (buffer fixed).</p>
-<h2 id="Tree-Structure-Modifications"><a href="#Tree-Structure-Modifications" class="headerlink" title="Tree Structure Modifications"></a>Tree Structure Modifications</h2><p>If an operation changes the tree structure, you must first acquire an exclusive lock on the tree (tree-latch-x). Taking node splitting as an example:</p>
-<ol>
-<li>First, find the leaf node to be split</li>
-<li>Allocate a new data page</li>
-<li>Insert a pointer to the new page into the upper-level non-leaf node</li>
-<li>Release the tree-latch-x (because the tree structure change is complete)</li>
-<li>Migrate some data from the original leaf node to the newly split leaf node</li>
-</ol>
-<p>This approach minimizes the duration of exclusive locks on the tree structure, thereby improving concurrency performance.</p>
-<h2 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h2><ul>
-<li>MySQL InnoDB Source Code</li>
-<li>“Database Internals” by Alex Petrov</li>
-</ul>
+    <p>此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch 自然是保护节点本身。</p>
+<p>为什么tree-latch只保护non-leaf nodes？因为B+ tree中叶子节点(leaf nodes)会存储数据，访问频率高，tree-latch保护范围若包括leaf-nodes会更容易出发锁竞争，降低并发性能。从non-leaf nodes的角度讲，在B+ tree中non-leaf nodes 存储的是指向子节点的指针，保护non-leaf nodes就是保护树结构。</p>
+<p>操作B tree时通常先获取 tree-latch-s，也就是树级别的s锁，这可以保证树的结构不被修改，然后自顶向下遍历树，找到要操作的叶子节点，对叶子节点加锁(node-latch)。在查找叶子节点的过程中，不会对非叶子节点加锁，这可以节省CPU时间，只需要保证响应的数据页不会被换出内存(bufferfixed)。</p>
+<p>如果操作会改变树结构，那就要先对树加x锁(tree-latch-x)，以节点分裂为例，首先找到要分裂的叶子节点，分配一个新数据页，向上层非叶子节点插入指向新页面的指针，之后就可以释放tree-latch-x（因为树结构变更已经完成），迁移部分数据从原叶子节点到新分裂出的叶子节点。</p>
 
   </div>
 </article>
@@ -215,11 +180,7 @@
             data-emit-metadata="0"
             data-input-position="bottom"
             data-theme="preferred_color_scheme"
-
-            
-            
-            
-            data-lang="en"
+            data-lang="zh-CN"
             crossorigin="anonymous"
             async>
         </script>
@@ -230,57 +191,45 @@
           <div id="footer-post-container">
   <div id="footer-post">
 
-
     <div id="nav-footer" style="display: none">
       <ul>
         
-          <li><a href="/">Home</a></li>
+          <li><a href="/">首页</a></li>
         
-          <li><a href="/about/">About</a></li>
+          <li><a href="/about/">关于</a></li>
         
-          <li><a href="/archives/">Writing</a></li>
+          <li><a href="/archives/">归档</a></li>
         
-          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">Projects</a></li>
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li>
         
       </ul>
     </div>
 
     
     
-      <div id="toc-footer" style="display: none">
-        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Why-Tree-Latch-Only-Protects-Non-Leaf-Nodes"><span class="toc-number">1.</span> <span class="toc-text">Why Tree Latch Only Protects Non-Leaf Nodes?</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Lock-Acquisition-Process"><span class="toc-number">2.</span> <span class="toc-text">Lock Acquisition Process</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Tree-Structure-Modifications"><span class="toc-number">3.</span> <span class="toc-text">Tree Structure Modifications</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Reference"><span class="toc-number">4.</span> <span class="toc-text">Reference</span></a></li></ol>
-      </div>
-    
 
     <div id="share-footer" style="display: none">
       <ul>
   <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2025/11/12/innodb/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2025/11/12/innodb/&text=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2025/11/12/innodb/&is_video=false&description=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" href="mailto:?subject=InnoDB B-tree (B+ tree) Locking Strategy&body=Check out this article: https://aqiu16717.github.io/2025/11/12/innodb/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2025/11/12/innodb/&name=InnoDB B-tree (B+ tree) Locking Strategy&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2025/11/12/innodb/&t=InnoDB B-tree (B+ tree) Locking Strategy"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2025/11/12/innodb/&text=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2025/11/12/innodb/&is_video=false&description=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=InnoDB中B-tree(B+ tree)的加锁策略&body=Check out this article: https://aqiu16717.github.io/2025/11/12/innodb/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2025/11/12/innodb/&title=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2025/11/12/innodb/&name=InnoDB中B-tree(B+ tree)的加锁策略&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2025/11/12/innodb/&t=InnoDB中B-tree(B+ tree)的加锁策略"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
 </ul>
 
     </div>
 
     <div id="actions-footer">
-        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
         
-          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> TOC</a>
-        
-        <!-- 语言切换 -->
-        
-        <a id="lang-switch-mobile" class="icon" href="/zh/2025/11/12/innodb-zh/">
-          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> 中文
-        </a>
-        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> Share</a>
-        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
     </div>
 
   </div>
@@ -293,7 +242,7 @@
     
     
     2024-2026
-    aq1u
+    Aqiu
   </div>
 </footer>
 
@@ -334,7 +283,7 @@
   <script type="text/javascript">
   $(function() {
     // copy-btn HTML
-    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"Copy to clipboard!\">";
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
     btn += '<i class="fa-regular fa-clone"></i>';
     btn += '</span>';
     // mount it!
@@ -345,7 +294,7 @@
       }
     });
     clip.on('success', function(e) {
-      e.trigger.setAttribute('aria-label', "Copied!");
+      e.trigger.setAttribute('aria-label', "复制成功！");
       e.clearSelection();
     })
   })
@@ -354,49 +303,6 @@
 
 <script src="/js/main.js"></script>
 
-
-<!-- Language Preference -->
-<script type="text/javascript">
-(function() {
-  // Get current language from HTML lang attribute
-  // English is default (no /zh/ prefix), Chinese is at /zh/
-  var currentPath = window.location.pathname;
-  var isZh = currentPath.startsWith('/zh/');
-  var currentLang = isZh ? 'zh' : 'en';
-  var storedLang = localStorage.getItem('preferred-lang');
-  
-  // Save language preference when user switches language
-  $(document).on('click', '.lang-dropdown a', function(e) {
-    var href = $(this).attr('href');
-    if (href && (href.startsWith('/zh/') || href === '/zh/')) {
-      localStorage.setItem('preferred-lang', 'zh');
-    } else {
-      localStorage.setItem('preferred-lang', 'en');
-    }
-  });
-  
-  // Check if we should redirect based on stored preference
-  // Only redirect on homepage to avoid loops
-  if (storedLang && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
-    if (storedLang === 'zh' && !isZh) {
-      window.location.href = '/zh/';
-    }
-  }
-  
-  // Add smooth transition for language switcher
-  $('.lang-switch > a').on('click', function(e) {
-    e.preventDefault();
-    $('.lang-dropdown').toggleClass('show');
-  });
-  
-  // Close dropdown when clicking outside
-  $(document).on('click', function(e) {
-    if (!$(e.target).closest('.lang-switch').length) {
-      $('.lang-dropdown').removeClass('show');
-    }
-  });
-})();
-</script>
 <!-- search -->
 
 <!-- Baidu Analytics -->
