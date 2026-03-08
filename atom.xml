@@ -6,7 +6,7 @@
   <link href="https://aqiu16717.github.io/atom.xml" rel="self"/>
   
   <link href="https://aqiu16717.github.io/"/>
-  <updated>2026-02-27T15:51:09.782Z</updated>
+  <updated>2026-03-08T07:48:20.985Z</updated>
   <id>https://aqiu16717.github.io/</id>
   
   <author>
@@ -17,11 +17,42 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>Understanding Snapshot Isolation Level</title>
-    <link href="https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"/>
-    <id>https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html</id>
+    <title>快照隔离级别（Snapshot Isolation）详解</title>
+    <link href="https://aqiu16717.github.io/zh/2026/02/09/snapshot-isolation/"/>
+    <id>https://aqiu16717.github.io/zh/2026/02/09/snapshot-isolation/</id>
     <published>2026-02-09T15:30:00.000Z</published>
-    <updated>2026-02-27T15:51:09.782Z</updated>
+    <updated>2026-03-08T07:48:20.985Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;h1 id=&quot;snapshot-isolation&quot;&gt;&lt;a href=&quot;#snapshot-isolation&quot; class=&quot;headerlink&quot; title=&quot;snapshot isolation&quot;&gt;&lt;/a&gt;snapshot</summary>
+        
+      
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="事务" scheme="https://aqiu16717.github.io/tags/%E4%BA%8B%E5%8A%A1/"/>
+    
+    <category term="隔离级别" scheme="https://aqiu16717.github.io/tags/%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB/"/>
+    
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Understanding Snapshot Isolation Level</title>
+    <link href="https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"/>
+    <id>https://aqiu16717.github.io/2026/02/09/snapshot-isolation/</id>
+    <published>2026-02-09T15:30:00.000Z</published>
+    <updated>2026-03-08T07:46:55.049Z</updated>
     
     
       
@@ -39,53 +70,45 @@
     
     <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
     
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
     <category term="transaction" scheme="https://aqiu16717.github.io/tags/transaction/"/>
     
     <category term="isolation level" scheme="https://aqiu16717.github.io/tags/isolation-level/"/>
-    
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
     
     <category term="concurrency control" scheme="https://aqiu16717.github.io/tags/concurrency-control/"/>
     
   </entry>
   
   <entry>
-    <title>快照隔离级别（Snapshot Isolation）详解</title>
-    <link href="https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"/>
-    <id>https://aqiu16717.github.io/2026/02/09/snapshot-isolation/</id>
-    <published>2026-02-09T15:30:00.000Z</published>
-    <updated>2026-02-27T15:47:02.583Z</updated>
+    <title>InnoDB中B-tree(B+ tree)的加锁策略</title>
+    <link href="https://aqiu16717.github.io/zh/2025/11/12/innodb/"/>
+    <id>https://aqiu16717.github.io/zh/2025/11/12/innodb/</id>
+    <published>2025-11-12T14:35:51.000Z</published>
+    <updated>2026-03-08T07:48:20.336Z</updated>
     
     
       
       
         
         
-    <summary type="html">&lt;h1 id=&quot;snapshot-isolation&quot;&gt;&lt;a href=&quot;#snapshot-isolation&quot; class=&quot;headerlink&quot; title=&quot;snapshot isolation&quot;&gt;&lt;/a&gt;snapshot</summary>
+    <summary type="html">&lt;p&gt;此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch</summary>
         
       
     
     
     
-    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
-    
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
-    
-    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
-    <category term="事务" scheme="https://aqiu16717.github.io/tags/%E4%BA%8B%E5%8A%A1/"/>
-    
-    <category term="隔离级别" scheme="https://aqiu16717.github.io/tags/%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB/"/>
+    <category term="innodb, B tree, B+ tree" scheme="https://aqiu16717.github.io/tags/innodb-B-tree-B-tree/"/>
     
   </entry>
   
   <entry>
     <title>InnoDB B-tree (B+ tree) Locking Strategy</title>
-    <link href="https://aqiu16717.github.io/en/2025/11/12/innodb/index.html"/>
-    <id>https://aqiu16717.github.io/en/2025/11/12/innodb/index.html</id>
+    <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
+    <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
     <published>2025-11-12T14:35:51.000Z</published>
-    <updated>2026-02-27T15:51:08.552Z</updated>
+    <updated>2026-03-08T07:46:53.944Z</updated>
     
     
       
@@ -108,29 +131,6 @@
     <category term="mysql" scheme="https://aqiu16717.github.io/tags/mysql/"/>
     
     <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>InnoDB中B-tree(B+ tree)的加锁策略</title>
-    <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
-    <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
-    <published>2025-11-12T14:35:51.000Z</published>
-    <updated>2026-02-27T15:46:56.949Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;p&gt;此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch</summary>
-        
-      
-    
-    
-    
-    
-    <category term="innodb, B tree, B+ tree" scheme="https://aqiu16717.github.io/tags/innodb-B-tree-B-tree/"/>
     
   </entry>
   
