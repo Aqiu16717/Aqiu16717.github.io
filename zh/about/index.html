@@ -175,24 +175,27 @@
 <script type="text/javascript">
 (function() {
   // Get current language from HTML lang attribute
-  var currentLang = document.documentElement.lang || 'zh';
+  // English is default (no /zh/ prefix), Chinese is at /zh/
+  var currentPath = window.location.pathname;
+  var isZh = currentPath.startsWith('/zh/');
+  var currentLang = isZh ? 'zh' : 'en';
   var storedLang = localStorage.getItem('preferred-lang');
   
   // Save language preference when user switches language
   $(document).on('click', '.lang-dropdown a', function(e) {
     var href = $(this).attr('href');
-    if (href && href.startsWith('/en')) {
-      localStorage.setItem('preferred-lang', 'en');
-    } else {
+    if (href && (href.startsWith('/zh/') || href === '/zh/')) {
       localStorage.setItem('preferred-lang', 'zh');
+    } else {
+      localStorage.setItem('preferred-lang', 'en');
     }
   });
   
   // Check if we should redirect based on stored preference
   // Only redirect on homepage to avoid loops
-  if (storedLang && window.location.pathname === '/') {
-    if (storedLang === 'en' && currentLang !== 'en') {
-      window.location.href = '/en/';
+  if (storedLang && (window.location.pathname === '/' || window.location.pathname === '/index.html')) {
+    if (storedLang === 'zh' && !isZh) {
+      window.location.href = '/zh/';
     }
   }
   

@@ -68,46 +68,15 @@
     <category term="database" scheme="https://aqiu16717.github.io/categories/database/"/>
     
     
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
-    
     <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
+    
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
     
     <category term="transaction" scheme="https://aqiu16717.github.io/tags/transaction/"/>
     
     <category term="isolation level" scheme="https://aqiu16717.github.io/tags/isolation-level/"/>
     
     <category term="concurrency control" scheme="https://aqiu16717.github.io/tags/concurrency-control/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>InnoDB B-tree (B+ tree) Locking Strategy</title>
-    <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
-    <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
-    <published>2025-11-12T14:35:51.000Z</published>
-    <updated>2026-03-08T07:46:53.944Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;p&gt;The locks here are divided into two levels: the tree-level lock called &lt;strong&gt;tree latch&lt;/strong&gt;, and the node-level lock called</summary>
-        
-      
-    
-    
-    
-    
-    <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
-    
-    <category term="innodb" scheme="https://aqiu16717.github.io/tags/innodb/"/>
-    
-    <category term="B tree" scheme="https://aqiu16717.github.io/tags/B-tree/"/>
-    
-    <category term="B+ tree" scheme="https://aqiu16717.github.io/tags/B-tree/"/>
-    
-    <category term="mysql" scheme="https://aqiu16717.github.io/tags/mysql/"/>
     
   </entry>
   
@@ -131,6 +100,37 @@
     
     
     <category term="innodb, B tree, B+ tree" scheme="https://aqiu16717.github.io/tags/innodb-B-tree-B-tree/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>InnoDB B-tree (B+ tree) Locking Strategy</title>
+    <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
+    <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
+    <published>2025-11-12T14:35:51.000Z</published>
+    <updated>2026-03-08T07:46:53.944Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;The locks here are divided into two levels: the tree-level lock called &lt;strong&gt;tree latch&lt;/strong&gt;, and the node-level lock called</summary>
+        
+      
+    
+    
+    
+    
+    <category term="innodb" scheme="https://aqiu16717.github.io/tags/innodb/"/>
+    
+    <category term="B tree" scheme="https://aqiu16717.github.io/tags/B-tree/"/>
+    
+    <category term="B+ tree" scheme="https://aqiu16717.github.io/tags/B-tree/"/>
+    
+    <category term="mysql" scheme="https://aqiu16717.github.io/tags/mysql/"/>
+    
+    <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
     
   </entry>
   
