@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="Raft 是一种用于管理复制日志的共识算法（consensus algorithm）。本文详细解析 Raft 算法的核心概念与实现机制。 1. 摘要Raft 是一种用于管理复制日志的共识算法。 2. 复制状态机  共识算法通常出现在复制状态机的背景下。保持复制日志的一致性是共识算法的职责。  架构分层：  客户端（Client）：指令发起方，不直接与状态机交互，而是统一发给集群的共识模块；客户端无">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Raft 共识算法详解">
+<meta property="og:url" content="https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/index.html">
+<meta property="og:site_name" content="aq1u&#39;s blog">
+<meta property="og:description" content="Raft 是一种用于管理复制日志的共识算法（consensus algorithm）。本文详细解析 Raft 算法的核心概念与实现机制。 1. 摘要Raft 是一种用于管理复制日志的共识算法。 2. 复制状态机  共识算法通常出现在复制状态机的背景下。保持复制日志的一致性是共识算法的职责。  架构分层：  客户端（Client）：指令发起方，不直接与状态机交互，而是统一发给集群的共识模块；客户端无">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure1.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure2.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure6.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure7.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure3.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure8.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure10.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure11.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure12.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/figure13.png">
+<meta property="article:published_time" content="2025-03-27T18:25:00.000Z">
+<meta property="article:modified_time" content="2026-04-10T05:43:09.551Z">
+<meta property="article:author" content="aq1u">
+<meta property="article:tag" content="Raft">
+<meta property="article:tag" content="共识算法">
+<meta property="article:tag" content="分布式一致性">
+<meta property="article:tag" content="分布式系统">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://aqiu16717.github.io/images/figure1.png">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>Raft 共识算法详解</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.0.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
+     -->
+        <!-- 语言切换 -->
+        
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="切换语言">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code">中</span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="/2025/03/28/raft-consensus-algorithm/" class="active">中文</a></li>
+            <li><a href="/en/2025/03/28/raft-consensus-algorithm-en/" class="">English</a></li>
+          </ul>
+        </li>
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li><a class="icon" aria-label="上一篇" href="/2025/11/12/innodb/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&text=Raft 共识算法详解"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&is_video=false&description=Raft 共识算法详解"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Raft 共识算法详解&body=Check out this article: https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&name=Raft 共识算法详解&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&t=Raft 共识算法详解"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%91%98%E8%A6%81"><span class="toc-number">1.</span> <span class="toc-text">1. 摘要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%A4%8D%E5%88%B6%E7%8A%B6%E6%80%81%E6%9C%BA"><span class="toc-number">2.</span> <span class="toc-text">2. 复制状态机</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-Paxos-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">3.</span> <span class="toc-text">3. Paxos 的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%8F%AF%E7%90%86%E8%A7%A3%E6%80%A7%E8%AE%BE%E8%AE%A1"><span class="toc-number">4.</span> <span class="toc-text">4. 可理解性设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Raft-%E5%85%B1%E8%AF%86%E7%AE%97%E6%B3%95"><span class="toc-number">5.</span> <span class="toc-text">5. Raft 共识算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E8%8A%82%E7%82%B9%E7%8A%B6%E6%80%81"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 节点状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E9%A2%86%E5%AF%BC%E8%80%85%E9%80%89%E4%B8%BE"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 领导者选举</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 日志复制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E5%AE%89%E5%85%A8%E6%80%A7"><span class="toc-number">5.4.</span> <span class="toc-text">5.4 安全性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E6%88%90%E5%91%98%E5%8F%98%E6%9B%B4"><span class="toc-number">6.</span> <span class="toc-text">6. 成员变更</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%97%A5%E5%BF%97%E5%8E%8B%E7%BC%A9"><span class="toc-number">7.</span> <span class="toc-text">7. 日志压缩</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92"><span class="toc-number">8.</span> <span class="toc-text">8. 客户端交互</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">9.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        Raft 共识算法详解
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">aq1u</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2025-03-27T18:25:00.000Z" class="dt-published" itemprop="datePublished">2025-03-28</time>
+        
+        (Updated: <time datetime="2026-04-10T05:43:09.551Z" class="dt-updated" itemprop="dateModified">2026-04-10</time>)
+        
+      
+    </div>
+
+
+      
+    <div class="article-category">
+        <i class="fa-solid fa-archive"></i>
+        <a class="category-link" href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/">分布式系统</a>
+    </div>
+
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/Raft/" rel="tag">Raft</a>, <a class="p-category" href="/tags/%E5%85%B1%E8%AF%86%E7%AE%97%E6%B3%95/" rel="tag">共识算法</a>, <a class="p-category" href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7/" rel="tag">分布式一致性</a>, <a class="p-category" href="/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/" rel="tag">分布式系统</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>Raft 是一种用于管理复制日志的共识算法（consensus algorithm）。本文详细解析 Raft 算法的核心概念与实现机制。</p>
+<h2 id="1-摘要"><a href="#1-摘要" class="headerlink" title="1. 摘要"></a>1. 摘要</h2><p>Raft 是一种用于管理复制日志的共识算法。</p>
+<h2 id="2-复制状态机"><a href="#2-复制状态机" class="headerlink" title="2. 复制状态机"></a>2. 复制状态机</h2><p><img src="/images/figure1.png" alt="复制状态机架构"></p>
+<blockquote>
+<p>共识算法通常出现在复制状态机的背景下。保持复制日志的一致性是共识算法的职责。</p>
+</blockquote>
+<p><strong>架构分层：</strong></p>
+<ul>
+<li><p><strong>客户端（Client）</strong>：指令发起方，不直接与状态机交互，而是统一发给集群的共识模块；客户端无需感知集群内部的状况，只需向集群发起请求，最终得到一个一致的响应结果。</p>
+</li>
+<li><p><strong>共识模块（Consensus Module）</strong>：部署在集群的每一个服务器节点上，相互之间通信协作；接受客户端的指令，将其转发给本地的复制日志；与其他节点的共识模块协商，保证所有节点的复制日志中，都按相同的顺序存储了相同的客户端指令。</p>
+</li>
+<li><p><strong>复制日志（Replicated Log）</strong>：部署在每个服务器节点上，存储的内容是客户端发给状态机的指令；所有节点的复制日志完全一致；是状态机的指令来源，是连接共识模块和状态机的”桥梁”。</p>
+</li>
+<li><p><strong>状态机（State Machine）</strong>：指令执行方，部署在每个服务器节点上；是一个确定性的模块，给定相同的初始状态 + 相同的指令序列，必然输出相同的结果、更新为相同的最终状态。</p>
+</li>
+</ul>
+<p><strong>常见疑问：</strong></p>
+<ul>
+<li><strong>为什么要通过复制日志中转，而不是共识模块直接给状态机发指令？</strong></li>
+</ul>
+<p><strong>解耦</strong>：将”指令的共识统一”和”指令的实际执行”拆分开，各司其职，降低架构复杂度；</p>
+<ul>
+<li><p><strong>容错</strong>：复制日志是持久化存储的，即便节点故障重启，也能从日志中恢复未执行的指令；</p>
+</li>
+<li><p><strong>可追溯</strong>：日志保留了所有客户端的指令记录，方便问题排查、系统回滚。</p>
+</li>
+<li><p><strong>为什么这个架构能保证所有节点的状态机输出一致？</strong></p>
+</li>
+</ul>
+<p>状态机的确定性：相同初始状态 + 相同指令序列，必然得到相同结果；</p>
+<ul>
+<li><p>复制日志的一致性：所有节点的日志内容、指令顺序完全相同。</p>
+</li>
+<li><p><strong>为什么由状态机返回结果给客户端？</strong></p>
+</li>
+</ul>
+<p>共识模块不知道指令是什么意思，也不会执行指令；</p>
+<ul>
+<li>状态机理解业务含义，执行指令并产生结果。</li>
+</ul>
+<p><strong>故障模型：</strong></p>
+<ul>
+<li><p><strong>非拜占庭故障（Non Byzantine）</strong>：节点只会挂掉、不说话、延迟，但不会撒谎、不会造假。</p>
+</li>
+<li><p><strong>拜占庭故障（Byzantine）</strong>：节点会故意撒谎、伪造消息、合谋叛变、乱发信息。</p>
+</li>
+</ul>
+<p>Raft 假设系统只存在非拜占庭故障。</p>
+<h2 id="3-Paxos-的问题"><a href="#3-Paxos-的问题" class="headerlink" title="3. Paxos 的问题"></a>3. Paxos 的问题</h2><ul>
+<li><p><strong>难以理解</strong>：Paxos 算法逻辑复杂，描述晦涩。</p>
+</li>
+<li><p><strong>难以实现</strong>：工程实现难度大。</p>
+</li>
+</ul>
+<p><strong>核心区别：</strong></p>
+<ul>
+<li><p><strong>Paxos 基于单决议</strong>：无顺序、孤立、只决定一件事。大家只投一次票，决定一件事，结束。</p>
+</li>
+<li><p><strong>Raft 基于多决议</strong>：有顺序、连续、决定一整条日志。大家一起按完全相同的顺序，做完一整个任务清单，不断加任务。</p>
+</li>
+</ul>
+<h2 id="4-可理解性设计"><a href="#4-可理解性设计" class="headerlink" title="4. 可理解性设计"></a>4. 可理解性设计</h2><p>Raft 通过两种方式提升可理解性：</p>
+<ul>
+<li><strong>问题分解（Decomposition）</strong></li>
+</ul>
+<p>领导者选举（Leader Election）</p>
+<ul>
+<li><p>日志复制（Log Replication）</p>
+</li>
+<li><p>安全性（Safety）</p>
+</li>
+<li><p>成员变更（Membership Changes）</p>
+</li>
+<li><p><strong>简化状态空间</strong>：减少要考虑的状态数量。</p>
+</li>
+</ul>
+<h2 id="5-Raft-共识算法"><a href="#5-Raft-共识算法" class="headerlink" title="5. Raft 共识算法"></a>5. Raft 共识算法</h2><p>Raft 基于<strong>强 Leader</strong> 设计。Leader 做三件事：</p>
+<ul>
+<li><p>从客户端接收日志条目</p>
+</li>
+<li><p>把日志复制到其他服务器</p>
+</li>
+<li><p>告诉其他服务器：什么时候可以安全地把日志应用到状态机</p>
+</li>
+</ul>
+<p>Leader 故障则自动重新选举。</p>
+<p><strong>三个子问题：</strong></p>
+<ul>
+<li><p><strong>选主（Leader Election）</strong>：旧 Leader 挂了自动选新 Leader</p>
+</li>
+<li><p><strong>日志复制（Log Replication）</strong>：Leader 收请求 → 生成日志 → 复制给所有节点 → 保证全集群日志完全相同</p>
+</li>
+<li><p><strong>安全性（Safety）</strong>：核心是状态机安全——只要有一个节点提交执行了某条日志，所有节点在同一个日志位置，都必须是同一条日志。</p>
+</li>
+</ul>
+<p><img src="/images/figure2.png" alt="Raft 算法总览"></p>
+<h3 id="5-1-节点状态"><a href="#5-1-节点状态" class="headerlink" title="5.1 节点状态"></a>5.1 节点状态</h3><p><strong>持久化状态（Persistent State）</strong>：</p>
+<ul>
+<li><p><code>currentTerm</code>：节点见过的最新任期号，单调递增</p>
+</li>
+<li><p><code>votedFor</code>：当前任期内投给了哪个候选人</p>
+</li>
+<li><p><code>log[]</code>：日志条目集合</p>
+</li>
+</ul>
+<p><strong>易失性状态（Volatile State）</strong>：</p>
+<ul>
+<li><p><code>commitIndex</code>：已确认提交的日志条目中，下标最大的那个值</p>
+</li>
+<li><p><code>lastApplied</code>：已应用到状态机的日志条目中，下标最大的那个值</p>
+</li>
+</ul>
+<p><strong>Leader 特有状态</strong>：</p>
+<ul>
+<li><p><code>nextIndex[]</code>：每个 Follower 下一次发送位置</p>
+</li>
+<li><p><code>matchIndex[]</code>：记录日志复制进度</p>
+</li>
+</ul>
+<h3 id="5-2-领导者选举"><a href="#5-2-领导者选举" class="headerlink" title="5.2 领导者选举"></a>5.2 领导者选举</h3><p>通过<strong>心跳机制</strong>触发选举。</p>
+<p><strong>选举流程：</strong></p>
+<ul>
+<li><p>服务器起始状态是 Follower</p>
+</li>
+<li><p>Leader 周期性发送心跳给 Follower 来维持权限</p>
+</li>
+<li><p>如果 Follower 在 <code>election timeout</code> 时间内未收到心跳，则开启新一轮选举</p>
+</li>
+<li><p>Candidate 增加 <code>currentTerm</code>，给自己投票，向其他服务器发送 <code>RequestVote</code> RPC</p>
+</li>
+<li><p>获得多数投票的 Candidate 成为 Leader</p>
+</li>
+</ul>
+<p>**解决分裂投票：**让 Election Timer 的超时时间随机化，每个服务器的超时值不同。假设心跳间隔 100ms，选举超时下限可设置为 300ms。</p>
+<h3 id="5-3-日志复制"><a href="#5-3-日志复制" class="headerlink" title="5.3 日志复制"></a>5.3 日志复制</h3><p><img src="/images/figure6.png" alt="日志结构"></p>
+<p><strong>日志格式：</strong></p>
+<ul>
+<li><p>每个 log entry 存储一个 state machine command 和 term number</p>
+</li>
+<li><p>每个 log entry 有一个 integer index 用于标识它在 log 中的位置</p>
+</li>
+</ul>
+<p><strong>提交流程：</strong></p>
+<ul>
+<li><p>Leader 将命令追加到自己的日志中</p>
+</li>
+<li><p>Leader 并发向其他服务器发送 <code>AppendEntries</code> RPC 复制日志</p>
+</li>
+<li><p>当日志在大多数节点复制成功后，Leader 将其标记为 <code>committed</code></p>
+</li>
+<li><p>Leader 将 committed 日志应用到状态机，并返回结果给客户端</p>
+</li>
+</ul>
+<p><strong>日志不一致处理：</strong></p>
+<p>Leader 通过强制 Follower 复制自己的 Log 来保证一致性。Leader 为每个 Follower 维护一个 <code>nextIndex</code>，表示要发送的下一个日志索引。</p>
+<p><img src="/images/figure7.png" alt="日志不一致情形"></p>
+<p>当 Follower 日志与 Leader 不一致时，Leader 会递减 <code>nextIndex</code> 并重试，直到找到一致的点，然后删除 Follower 该点之后的日志，发送 Leader 的日志。</p>
+<h3 id="5-4-安全性"><a href="#5-4-安全性" class="headerlink" title="5.4 安全性"></a>5.4 安全性</h3><p><img src="/images/figure3.png" alt="安全论证图"></p>
+<p><strong>五大核心安全属性：</strong></p>
+<ul>
+<li><p><strong>Election Safety</strong>：一个任期最多只会有一个 Leader 当选</p>
+</li>
+<li><p><strong>Leader Append-Only</strong>：Leader 永远不会覆盖或删除日志条目</p>
+</li>
+<li><p><strong>Log Matching</strong>：如果两个日志的某个条目有相同的下标和任期，那么该条目前的日志完全相同</p>
+</li>
+<li><p><strong>Leader Completeness</strong>：如果一个日志条目在某个任期内被提交，该条目在高任期的 Leader 日志中也必然存在</p>
+</li>
+<li><p><strong>State Machine Safety</strong>：如果节点在给定的下标提交了日志条目，其他节点无法在同一个下标上提交不同的日志条目</p>
+</li>
+</ul>
+<p>**选举限制：**Raft 通过投票过程防止日志不够新的 Candidate 赢得选举。投票者会比较 Candidate 的日志是否至少和自己一样新（先比较 term，再比较 index）。</p>
+<p><strong>旧任期日志提交问题：</strong></p>
+<p><img src="/images/figure8.png" alt="旧任期日志提交问题"></p>
+<p>关键点：</p>
+<ul>
+<li><p><strong>旧任期日志</strong>：即使复制到多数节点，也不能提交，因为可能被后来的 Leader 覆盖</p>
+</li>
+<li><p><strong>当前任期日志</strong>：只要复制到多数节点，就可以安全提交</p>
+</li>
+<li><p>一旦当前任期日志提交，它前面所有旧日志自动提交</p>
+</li>
+</ul>
+<h2 id="6-成员变更"><a href="#6-成员变更" class="headerlink" title="6. 成员变更"></a>6. 成员变更</h2><p><img src="/images/figure10.png" alt="配置变更问题"></p>
+<p>直接从一种配置切换到另一种配置是不安全的，因为不同的服务器会在不同的时间进行切换，可能导致同时选出两个 Leader。</p>
+<p><strong>解决方案：联合共识（Joint Consensus）</strong></p>
+<p><img src="/images/figure11.png" alt="配置变更过程"></p>
+<p>采用两阶段方法：</p>
+<ul>
+<li><p>先切换到 Cold,new 联合配置</p>
+</li>
+<li><p>再切换到 Cnew 新配置</p>
+</li>
+</ul>
+<h2 id="7-日志压缩"><a href="#7-日志压缩" class="headerlink" title="7. 日志压缩"></a>7. 日志压缩</h2><p><img src="/images/figure12.png" alt="快照替换日志"></p>
+<p>当日志增长过长时，使用快照（Snapshot）替换已提交的日志条目。快照只存储当前状态。</p>
+<p><img src="/images/figure13.png" alt="InstallSnapshot RPC"></p>
+<p>通过 <code>InstallSnapshot</code> RPC 将快照分块传输给 Follower。</p>
+<h2 id="8-客户端交互"><a href="#8-客户端交互" class="headerlink" title="8. 客户端交互"></a>8. 客户端交互</h2><p><strong>找到 Leader：</strong></p>
+<ul>
+<li><p>客户端初次启动时随机连接一台服务器</p>
+</li>
+<li><p>如果连接的不是 Leader，服务器会告知当前 Leader 信息</p>
+</li>
+<li><p>如果 Leader 崩溃，客户端请求超时后重新随机选择服务器</p>
+</li>
+</ul>
+<p><strong>线性一致性：</strong></p>
+<ul>
+<li><p>客户端为每条命令分配唯一序列号</p>
+</li>
+<li><p>状态机为每个客户端记录最近处理的序列号及响应结果</p>
+</li>
+<li><p>如果收到重复序列号的命令，直接返回缓存结果而不重新执行</p>
+</li>
+</ul>
+<p>**只读操作：**Leader 必须在响应只读请求前：</p>
+<ul>
+<li><p>提交一条当前任期的 no-op 条目</p>
+</li>
+<li><p>与集群大多数节点交换心跳，确认自己仍是 Leader</p>
+</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><p><a target="_blank" rel="noopener" href="https://raft.github.io/raft.pdf">Raft 论文</a> - In Search of an Understandable Consensus Algorithm</p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://raft.github.io/">Raft 官网</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://xie.infoq.cn/article/52a2d33f5757cea4713f47793">化繁为简，聊一聊复制状态机系统架构抽象</a></p>
+</li>
+<li><p><a target="_blank" rel="noopener" href="https://arthurchiao.art/blog/raft-paper-zh/">Raft 共识算法（及 etcd&#x2F;raft 源码解析）</a></p>
+</li>
+</ul>
+
+  </div>
+</article>
+
+
+
+    <div class="blog-post-comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="Aqiu16717/Aqiu16717.github.io"
+            data-repo-id="R_kgDOHKvpgw"
+            data-category="Announcements"
+            data-category-id="DIC_kwDOHKvpg84C1uo1"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="preferred_color_scheme"
+
+            
+            
+            
+            data-lang="zh-CN"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%91%98%E8%A6%81"><span class="toc-number">1.</span> <span class="toc-text">1. 摘要</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E5%A4%8D%E5%88%B6%E7%8A%B6%E6%80%81%E6%9C%BA"><span class="toc-number">2.</span> <span class="toc-text">2. 复制状态机</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-Paxos-%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">3.</span> <span class="toc-text">3. Paxos 的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E5%8F%AF%E7%90%86%E8%A7%A3%E6%80%A7%E8%AE%BE%E8%AE%A1"><span class="toc-number">4.</span> <span class="toc-text">4. 可理解性设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Raft-%E5%85%B1%E8%AF%86%E7%AE%97%E6%B3%95"><span class="toc-number">5.</span> <span class="toc-text">5. Raft 共识算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E8%8A%82%E7%82%B9%E7%8A%B6%E6%80%81"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 节点状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E9%A2%86%E5%AF%BC%E8%80%85%E9%80%89%E4%B8%BE"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 领导者选举</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 日志复制</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E5%AE%89%E5%85%A8%E6%80%A7"><span class="toc-number">5.4.</span> <span class="toc-text">5.4 安全性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E6%88%90%E5%91%98%E5%8F%98%E6%9B%B4"><span class="toc-number">6.</span> <span class="toc-text">6. 成员变更</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%97%A5%E5%BF%97%E5%8E%8B%E7%BC%A9"><span class="toc-number">7.</span> <span class="toc-text">7. 日志压缩</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92"><span class="toc-number">8.</span> <span class="toc-text">8. 客户端交互</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">9.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&text=Raft 共识算法详解"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&is_video=false&description=Raft 共识算法详解"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=Raft 共识算法详解&body=Check out this article: https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&title=Raft 共识算法详解"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&name=Raft 共识算法详解&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/&t=Raft 共识算法详解"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <!-- 语言切换 -->
+        
+        <a id="lang-switch-mobile" class="icon" href="/en/2025/03/28/raft-consensus-algorithm-en/">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> EN
+        </a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-center">
+    Copyright &copy;
+    
+    
+    2024-2026
+    aq1u
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+ 
+  <link
+    rel="preload"
+    href="/lib/font-awesome/css/all.min.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="/lib/font-awesome/css/all.min.css"
+  /></noscript>
+
+
+    <!-- jquery -->
+
+  
+<script src="/lib/jquery/jquery.min.js"></script>
+
+
+
+
+
+<!-- clipboard -->
+
+  
+    
+<script src="/lib/clipboard/clipboard.min.js"></script>
+
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
