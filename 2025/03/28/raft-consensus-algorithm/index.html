@@ -14,40 +14,40 @@
 <meta property="og:site_name" content="aq1u&#39;s blog">
 <meta property="og:description" content="Raft 是一种用于管理复制日志的共识算法（consensus algorithm）。本文详细解析 Raft 算法的核心概念与实现机制。 1. 摘要Raft 是一种用于管理复制日志的共识算法。 2. 复制状态机  共识算法通常出现在复制状态机的背景下。保持复制日志的一致性是共识算法的职责。  架构分层：  客户端（Client）：指令发起方，不直接与状态机交互，而是统一发给集群的共识模块；客户端无">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure1.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure2.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure6.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure7.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure3.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure8.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure10.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure11.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure12.png">
-<meta property="og:image" content="https://aqiu16717.github.io/images/figure13.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure1.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure2.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure6.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure7.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure3.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure8.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure10.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure11.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure12.png">
+<meta property="og:image" content="https://aqiu16717.github.io/images/posts/raft/figure13.png">
 <meta property="article:published_time" content="2025-03-27T18:25:00.000Z">
-<meta property="article:modified_time" content="2026-04-10T05:43:09.551Z">
+<meta property="article:modified_time" content="2026-04-12T12:35:12.682Z">
 <meta property="article:author" content="aq1u">
 <meta property="article:tag" content="Raft">
 <meta property="article:tag" content="共识算法">
 <meta property="article:tag" content="分布式一致性">
 <meta property="article:tag" content="分布式系统">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://aqiu16717.github.io/images/figure1.png">
+<meta name="twitter:image" content="https://aqiu16717.github.io/images/posts/raft/figure1.png">
     
     
       
         
-          <link rel="shortcut icon" href="/images/favicon.ico">
+          <link rel="shortcut icon" href="/images/assets/favicon.ico">
         
       
       
         
-          <link rel="icon" type="image/png" href="/images/favicon-192x192.png" sizes="192x192">
+          <link rel="icon" type="image/png" href="/images/assets/favicon-192x192.png" sizes="192x192">
         
       
       
         
-          <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/assets/apple-touch-icon.png">
         
       
     
@@ -169,7 +169,7 @@
       
         <time datetime="2025-03-27T18:25:00.000Z" class="dt-published" itemprop="datePublished">2025-03-28</time>
         
-        (Updated: <time datetime="2026-04-10T05:43:09.551Z" class="dt-updated" itemprop="dateModified">2026-04-10</time>)
+        (Updated: <time datetime="2026-04-12T12:35:12.682Z" class="dt-updated" itemprop="dateModified">2026-04-12</time>)
         
       
     </div>
@@ -196,7 +196,7 @@
   <div class="content e-content" itemprop="articleBody">
     <p>Raft 是一种用于管理复制日志的共识算法（consensus algorithm）。本文详细解析 Raft 算法的核心概念与实现机制。</p>
 <h2 id="1-摘要"><a href="#1-摘要" class="headerlink" title="1. 摘要"></a>1. 摘要</h2><p>Raft 是一种用于管理复制日志的共识算法。</p>
-<h2 id="2-复制状态机"><a href="#2-复制状态机" class="headerlink" title="2. 复制状态机"></a>2. 复制状态机</h2><p><img src="/images/figure1.png" alt="复制状态机架构"></p>
+<h2 id="2-复制状态机"><a href="#2-复制状态机" class="headerlink" title="2. 复制状态机"></a>2. 复制状态机</h2><p><img src="/images/posts/raft/figure1.png" alt="复制状态机架构"></p>
 <blockquote>
 <p>共识算法通常出现在复制状态机的背景下。保持复制日志的一致性是共识算法的职责。</p>
 </blockquote>
@@ -290,7 +290,7 @@
 <li><p><strong>安全性（Safety）</strong>：核心是状态机安全——只要有一个节点提交执行了某条日志，所有节点在同一个日志位置，都必须是同一条日志。</p>
 </li>
 </ul>
-<p><img src="/images/figure2.png" alt="Raft 算法总览"></p>
+<p><img src="/images/posts/raft/figure2.png" alt="Raft 算法总览"></p>
 <h3 id="5-1-节点状态"><a href="#5-1-节点状态" class="headerlink" title="5.1 节点状态"></a>5.1 节点状态</h3><p><strong>持久化状态（Persistent State）</strong>：</p>
 <ul>
 <li><p><code>currentTerm</code>：节点见过的最新任期号，单调递增</p>
@@ -329,7 +329,7 @@
 </li>
 </ul>
 <p>**解决分裂投票：**让 Election Timer 的超时时间随机化，每个服务器的超时值不同。假设心跳间隔 100ms，选举超时下限可设置为 300ms。</p>
-<h3 id="5-3-日志复制"><a href="#5-3-日志复制" class="headerlink" title="5.3 日志复制"></a>5.3 日志复制</h3><p><img src="/images/figure6.png" alt="日志结构"></p>
+<h3 id="5-3-日志复制"><a href="#5-3-日志复制" class="headerlink" title="5.3 日志复制"></a>5.3 日志复制</h3><p><img src="/images/posts/raft/figure6.png" alt="日志结构"></p>
 <p><strong>日志格式：</strong></p>
 <ul>
 <li><p>每个 log entry 存储一个 state machine command 和 term number</p>
@@ -350,9 +350,9 @@
 </ul>
 <p><strong>日志不一致处理：</strong></p>
 <p>Leader 通过强制 Follower 复制自己的 Log 来保证一致性。Leader 为每个 Follower 维护一个 <code>nextIndex</code>，表示要发送的下一个日志索引。</p>
-<p><img src="/images/figure7.png" alt="日志不一致情形"></p>
+<p><img src="/images/posts/raft/figure7.png" alt="日志不一致情形"></p>
 <p>当 Follower 日志与 Leader 不一致时，Leader 会递减 <code>nextIndex</code> 并重试，直到找到一致的点，然后删除 Follower 该点之后的日志，发送 Leader 的日志。</p>
-<h3 id="5-4-安全性"><a href="#5-4-安全性" class="headerlink" title="5.4 安全性"></a>5.4 安全性</h3><p><img src="/images/figure3.png" alt="安全论证图"></p>
+<h3 id="5-4-安全性"><a href="#5-4-安全性" class="headerlink" title="5.4 安全性"></a>5.4 安全性</h3><p><img src="/images/posts/raft/figure3.png" alt="安全论证图"></p>
 <p><strong>五大核心安全属性：</strong></p>
 <ul>
 <li><p><strong>Election Safety</strong>：一个任期最多只会有一个 Leader 当选</p>
@@ -368,7 +368,7 @@
 </ul>
 <p>**选举限制：**Raft 通过投票过程防止日志不够新的 Candidate 赢得选举。投票者会比较 Candidate 的日志是否至少和自己一样新（先比较 term，再比较 index）。</p>
 <p><strong>旧任期日志提交问题：</strong></p>
-<p><img src="/images/figure8.png" alt="旧任期日志提交问题"></p>
+<p><img src="/images/posts/raft/figure8.png" alt="旧任期日志提交问题"></p>
 <p>关键点：</p>
 <ul>
 <li><p><strong>旧任期日志</strong>：即使复制到多数节点，也不能提交，因为可能被后来的 Leader 覆盖</p>
@@ -378,10 +378,10 @@
 <li><p>一旦当前任期日志提交，它前面所有旧日志自动提交</p>
 </li>
 </ul>
-<h2 id="6-成员变更"><a href="#6-成员变更" class="headerlink" title="6. 成员变更"></a>6. 成员变更</h2><p><img src="/images/figure10.png" alt="配置变更问题"></p>
+<h2 id="6-成员变更"><a href="#6-成员变更" class="headerlink" title="6. 成员变更"></a>6. 成员变更</h2><p><img src="/images/posts/raft/figure10.png" alt="配置变更问题"></p>
 <p>直接从一种配置切换到另一种配置是不安全的，因为不同的服务器会在不同的时间进行切换，可能导致同时选出两个 Leader。</p>
 <p><strong>解决方案：联合共识（Joint Consensus）</strong></p>
-<p><img src="/images/figure11.png" alt="配置变更过程"></p>
+<p><img src="/images/posts/raft/figure11.png" alt="配置变更过程"></p>
 <p>采用两阶段方法：</p>
 <ul>
 <li><p>先切换到 Cold,new 联合配置</p>
@@ -389,9 +389,9 @@
 <li><p>再切换到 Cnew 新配置</p>
 </li>
 </ul>
-<h2 id="7-日志压缩"><a href="#7-日志压缩" class="headerlink" title="7. 日志压缩"></a>7. 日志压缩</h2><p><img src="/images/figure12.png" alt="快照替换日志"></p>
+<h2 id="7-日志压缩"><a href="#7-日志压缩" class="headerlink" title="7. 日志压缩"></a>7. 日志压缩</h2><p><img src="/images/posts/raft/figure12.png" alt="快照替换日志"></p>
 <p>当日志增长过长时，使用快照（Snapshot）替换已提交的日志条目。快照只存储当前状态。</p>
-<p><img src="/images/figure13.png" alt="InstallSnapshot RPC"></p>
+<p><img src="/images/posts/raft/figure13.png" alt="InstallSnapshot RPC"></p>
 <p>通过 <code>InstallSnapshot</code> RPC 将快照分块传输给 Follower。</p>
 <h2 id="8-客户端交互"><a href="#8-客户端交互" class="headerlink" title="8. 客户端交互"></a>8. 客户端交互</h2><p><strong>找到 Leader：</strong></p>
 <ul>
