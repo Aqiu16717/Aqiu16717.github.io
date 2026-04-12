@@ -9,13 +9,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <meta name="description" content="读请求优化按照最朴素的实现，读请求也需要像写请求一样走一遍日志复制流程，但这显然太慢了。 Raft 必须保证线性一致性（Linearizability），即：一旦一个值被返回，后续所有的读请求都必须看到这个值或更新的值。 单纯从 Leader 读取会面临 脑裂（Split Brain） 风险：  假设 Leader A 被分区隔离了，其他节点选出了新 Leader B。 但 Leader A 此时">
 <meta property="og:type" content="article">
-<meta property="og:title" content="raft-enginer.md">
+<meta property="og:title" content="raft 工程化实践">
 <meta property="og:url" content="https://aqiu16717.github.io/2026/04/12/raft-engineering/index.html">
 <meta property="og:site_name" content="aq1u&#39;s blog">
 <meta property="og:description" content="读请求优化按照最朴素的实现，读请求也需要像写请求一样走一遍日志复制流程，但这显然太慢了。 Raft 必须保证线性一致性（Linearizability），即：一旦一个值被返回，后续所有的读请求都必须看到这个值或更新的值。 单纯从 Leader 读取会面临 脑裂（Split Brain） 风险：  假设 Leader A 被分区隔离了，其他节点选出了新 Leader B。 但 Leader A 此时">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-04-12T13:03:28.000Z">
-<meta property="article:modified_time" content="2026-04-12T13:13:43.542Z">
+<meta property="article:modified_time" content="2026-04-12T14:50:11.150Z">
 <meta property="article:author" content="aq1u">
 <meta property="article:tag" content="raft">
 <meta name="twitter:card" content="summary">
@@ -38,7 +38,7 @@
       
     
     <!-- title -->
-    <title>raft-enginer.md</title>
+    <title>raft 工程化实践</title>
     <!-- async scripts -->
     <!-- Google Analytics -->
 
@@ -112,16 +112,16 @@
     <div id="share" style="display: none">
       <ul>
   <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&text=raft-enginer.md"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&is_video=false&description=raft-enginer.md"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
-  <li><a class="icon" href="mailto:?subject=raft-enginer.md&body=Check out this article: https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&name=raft-enginer.md&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/&t=raft-enginer.md"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&text=raft 工程化实践"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&is_video=false&description=raft 工程化实践"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=raft 工程化实践&body=Check out this article: https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&name=raft 工程化实践&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/&t=raft 工程化实践"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
 </ul>
 
     </div>
@@ -141,7 +141,7 @@
   <header>
     
     <h1 class="posttitle p-name" itemprop="name headline">
-        raft-enginer.md
+        raft 工程化实践
     </h1>
 
 
@@ -155,7 +155,7 @@
       
         <time datetime="2026-04-12T13:03:28.000Z" class="dt-published" itemprop="datePublished">2026-04-12</time>
         
-        (Updated: <time datetime="2026-04-12T13:13:43.542Z" class="dt-updated" itemprop="dateModified">2026-04-12</time>)
+        (Updated: <time datetime="2026-04-12T14:50:11.150Z" class="dt-updated" itemprop="dateModified">2026-04-12</time>)
         
       
     </div>
@@ -268,16 +268,16 @@
     <div id="share-footer" style="display: none">
       <ul>
   <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&text=raft-enginer.md"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&is_video=false&description=raft-enginer.md"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" href="mailto:?subject=raft-enginer.md&body=Check out this article: https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&name=raft-enginer.md&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
-  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/&t=raft-enginer.md"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&text=raft 工程化实践"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&is_video=false&description=raft 工程化实践"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=raft 工程化实践&body=Check out this article: https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft 工程化实践"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&name=raft 工程化实践&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/&t=raft 工程化实践"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
 </ul>
 
     </div>
