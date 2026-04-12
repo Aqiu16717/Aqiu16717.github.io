@@ -106,6 +106,29 @@
   </entry>
   
   <entry>
+    <title>InnoDB中B-tree(B+ tree)的加锁策略</title>
+    <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
+    <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
+    <published>2025-11-12T14:35:51.000Z</published>
+    <updated>2026-04-10T05:19:44.732Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;p&gt;此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch</summary>
+        
+      
+    
+    
+    
+    
+    <category term="innodb, B tree, B+ tree" scheme="https://aqiu16717.github.io/tags/innodb-B-tree-B-tree/"/>
+    
+  </entry>
+  
+  <entry>
     <title>InnoDB B-tree (B+ tree) Locking Strategy</title>
     <link href="https://aqiu16717.github.io/en/2025/11/12/innodb/index.html"/>
     <id>https://aqiu16717.github.io/en/2025/11/12/innodb/index.html</id>
@@ -133,29 +156,6 @@
     <category term="mysql" scheme="https://aqiu16717.github.io/tags/mysql/"/>
     
     <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>InnoDB中B-tree(B+ tree)的加锁策略</title>
-    <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
-    <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
-    <published>2025-11-12T14:35:51.000Z</published>
-    <updated>2026-04-10T05:19:44.732Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;p&gt;此处的锁分两个级别，树级别的锁tree latch，和节点级别的锁node latch. tree latch 会保护所有的非叶子节点(non-leaf nodes)，node latch</summary>
-        
-      
-    
-    
-    
-    
-    <category term="innodb, B tree, B+ tree" scheme="https://aqiu16717.github.io/tags/innodb-B-tree-B-tree/"/>
     
   </entry>
   
