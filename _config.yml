@@ -138,7 +138,7 @@ theme_config:
     enabled: true
     width: 50
     height: 50
-    url: /images/logo.jpg
+    url: /images/assets/logo.jpg
     gravatar: false
     grayout: false
 

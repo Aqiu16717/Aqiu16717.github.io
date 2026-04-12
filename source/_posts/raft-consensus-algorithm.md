@@ -19,7 +19,7 @@ Raft 是一种用于管理复制日志的共识算法。
 
 ## 2. 复制状态机
 
-![复制状态机架构](/images/figure1.png)
+![复制状态机架构](/images/posts/raft/figure1.png)
 
 > 共识算法通常出现在复制状态机的背景下。保持复制日志的一致性是共识算法的职责。
 
@@ -111,7 +111,7 @@ Leader 故障则自动重新选举。
 
 - **安全性（Safety）**：核心是状态机安全——只要有一个节点提交执行了某条日志，所有节点在同一个日志位置，都必须是同一条日志。
 
-![Raft 算法总览](/images/figure2.png)
+![Raft 算法总览](/images/posts/raft/figure2.png)
 
 ### 5.1 节点状态
 
@@ -155,7 +155,7 @@ Leader 故障则自动重新选举。
 
 ### 5.3 日志复制
 
-![日志结构](/images/figure6.png)
+![日志结构](/images/posts/raft/figure6.png)
 
 **日志格式：**
 
@@ -177,13 +177,13 @@ Leader 故障则自动重新选举。
 
 Leader 通过强制 Follower 复制自己的 Log 来保证一致性。Leader 为每个 Follower 维护一个 `nextIndex`，表示要发送的下一个日志索引。
 
-![日志不一致情形](/images/figure7.png)
+![日志不一致情形](/images/posts/raft/figure7.png)
 
 当 Follower 日志与 Leader 不一致时，Leader 会递减 `nextIndex` 并重试，直到找到一致的点，然后删除 Follower 该点之后的日志，发送 Leader 的日志。
 
 ### 5.4 安全性
 
-![安全论证图](/images/figure3.png)
+![安全论证图](/images/posts/raft/figure3.png)
 
 **五大核心安全属性：**
 
@@ -201,7 +201,7 @@ Leader 通过强制 Follower 复制自己的 Log 来保证一致性。Leader 为
 
 **旧任期日志提交问题：**
 
-![旧任期日志提交问题](/images/figure8.png)
+![旧任期日志提交问题](/images/posts/raft/figure8.png)
 
 关键点：
 
@@ -213,13 +213,13 @@ Leader 通过强制 Follower 复制自己的 Log 来保证一致性。Leader 为
 
 ## 6. 成员变更
 
-![配置变更问题](/images/figure10.png)
+![配置变更问题](/images/posts/raft/figure10.png)
 
 直接从一种配置切换到另一种配置是不安全的，因为不同的服务器会在不同的时间进行切换，可能导致同时选出两个 Leader。
 
 **解决方案：联合共识（Joint Consensus）**
 
-![配置变更过程](/images/figure11.png)
+![配置变更过程](/images/posts/raft/figure11.png)
 
 采用两阶段方法：
 
@@ -229,11 +229,11 @@ Leader 通过强制 Follower 复制自己的 Log 来保证一致性。Leader 为
 
 ## 7. 日志压缩
 
-![快照替换日志](/images/figure12.png)
+![快照替换日志](/images/posts/raft/figure12.png)
 
 当日志增长过长时，使用快照（Snapshot）替换已提交的日志条目。快照只存储当前状态。
 
-![InstallSnapshot RPC](/images/figure13.png)
+![InstallSnapshot RPC](/images/posts/raft/figure13.png)
 
 通过 `InstallSnapshot` RPC 将快照分块传输给 Follower。
 
