@@ -6,13 +6,13 @@ comments: false
 
 ## 你好，我是 aq1u 👋
 
-一名热爱技术的开发者，专注于后端开发和分布式系统。
+一名热爱技术的开发者，专注于数据库内核和分布式系统。
 
 ### 技术栈
 
-- **语言**: Go, Python, SQL
-- **数据库**: MySQL, Redis, etcd
-- **工具**: Docker, Kubernetes, Git
+- **语言**: C, CPP
+- **数据库**: MySQL
+- **工具**: Vim, Neovim, tmux
 
 ### 关于本站
 

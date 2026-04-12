@@ -1,245 +1,347 @@
-# AGENTS.md - Aqiu's Blog
+<!-- AGENTS.md - Aqiu's Blog -->
 
 ## Project Overview
 
-This is a **personal technical blog** hosted on GitHub Pages, generated using the [Hexo](https://hexo.io/) static site generator (version 8.0.0). The blog is written in Chinese (zh-CN) and focuses on programming, databases, and distributed systems.
+This is **aq1u's personal technical blog** - a static site generated using [Hexo](https://hexo.io/) (version 8.0.0) and hosted on GitHub Pages. The blog is written primarily in Chinese (zh-CN) with some English content, focusing on programming, databases, and distributed systems.
 
 - **Website**: https://aqiu16717.github.io/
 - **Repository**: https://github.com/Aqiu16717/Aqiu16717.github.io
-- **Author**: Aqiu
+- **Author**: aq1u
+- **Email**: aqiu16717@gmail.com
 - **Generator**: Hexo 8.0.0
-- **Theme**: Cactus (a clean, responsive theme for Hexo)
+- **Theme**: Cactus (a clean, responsive, minimal theme)
+- **Primary Language**: Chinese (zh-CN)
 
 ## Technology Stack
 
 ### Core Technologies
-- **Hexo 8.0.0** - Fast, simple & powerful blog framework
-- **Node.js** - Runtime for Hexo (required for development)
-- **EJS/Markdown** - Template and content formats
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Hexo | 8.0.0 | Static site generator |
+| Node.js | 18+ | Runtime for Hexo |
+| EJS | 2.0.0 | Template engine |
+| Marked | 7.0.0 | Markdown renderer |
+| Stylus | 3.0.1 | CSS preprocessor |
 
-### Frontend Libraries
+### Hexo Plugins
+| Plugin | Purpose |
+|--------|---------|
+| hexo-deployer-git | Git-based deployment |
+| hexo-generator-archive | Archive page generator |
+| hexo-generator-category | Category page generator |
+| hexo-generator-feed | RSS/Atom feed generator |
+| hexo-generator-index | Index page generator |
+| hexo-generator-tag | Tag page generator |
+| hexo-renderer-ejs | EJS template renderer |
+| hexo-renderer-marked | Markdown renderer |
+| hexo-renderer-stylus | Stylus CSS renderer |
+| hexo-server | Development server |
+
+### Frontend Libraries (Theme)
 | Library | Version | Purpose |
 |---------|---------|---------|
-| jQuery | 3.x | DOM manipulation and event handling |
+| jQuery | 3.6.x | DOM manipulation |
 | Font Awesome | 6.x | Icon library |
-| Clipboard.js | 2.x | Code block copy functionality |
-| Justified Gallery | - | Image gallery layout |
+| Clipboard.js | 2.x | Code copy functionality |
+| Justified Gallery | 3.8.x | Image gallery layout |
 
 ### Comments & Analytics
-- **Giscus** - GitHub Discussions-based comment system (configured for this repo)
-- Reserved placeholders for: Google Analytics, Umami, Baidu Analytics, Cloudflare Analytics
+- **Giscus** - GitHub Discussions-based comment system
+  - Repository: `Aqiu16717/Aqiu16717.github.io`
+  - Category: Announcements
+- RSS Feed: Atom format at `/atom.xml`
 
 ## Project Structure
 
 ```
 Aqiu16717.github.io/
-├── index.html              # Homepage
-├── 404.html                # 404 error page
-├── atom.xml                # RSS/Atom feed
-├── about/                  # About page
-│   └── index.html
-├── archives/               # Archives organized by year/month
-│   ├── 2025/
-│   ├── 2026/
-│   └── index.html
-├── categories/             # Category pages
-│   └── 数据库/
-├── tags/                   # Tag pages
-│   ├── MVCC/
-│   ├── 事务/
-│   ├── 数据库/
-│   ├── 隔离级别/
-│   └── innodb-B-tree-B-tree/
-├── 2025/                   # Blog posts by year/month/day
-│   └── 11/
-│       └── 12/
-│           └── innodb/
-│               └── index.html
-├── 2026/
-│   └── 02/
-│       └── 09/
-│           └── snapshot-isolation/
-│               └── index.html
-├── css/                    # Stylesheets
-│   ├── style.css           # Main stylesheet (custom + basscss)
-│   └── rtl.css             # Right-to-left language support
-├── js/                     # JavaScript files
-│   ├── main.js             # Main UI interactions (menu, scroll, etc.)
-│   └── search.js           # Local search functionality
-├── lib/                    # Third-party libraries
-│   ├── clipboard/          # Clipboard.js
-│   ├── font-awesome/       # Font Awesome icons
-│   ├── jquery/             # jQuery
-│   ├── justified-gallery/  # Image gallery
-│   ├── meslo-LG/           # Meslo LG font files
-│   └── vazir-font/         # Vazir Persian/Arabic font
-└── images/                 # Static images
-    ├── logo.jpg/png        # Site logo
-    ├── favicon.ico         # Favicon
-    ├── favicon-192x192.png # Large favicon
-    └── apple-touch-icon.png # iOS icon
+├── _config.yml              # Main Hexo configuration
+├── package.json             # Node.js dependencies
+├── deploy.sh                # Deployment script
+├── TODO.md                  # Blog improvement plan (Chinese)
+├── scaffolds/               # Post/page templates
+│   ├── draft.md
+│   ├── page.md
+│   └── post.md
+├── source/                  # Source content (Markdown, images)
+│   ├── _drafts/            # Draft posts (not published)
+│   ├── _posts/             # Published blog posts
+│   ├── about/              # About page
+│   ├── en/                 # English content
+│   └── images/             # Static images (logos, favicons, figures)
+├── themes/                  # Theme directory
+│   └── cactus/             # Cactus theme files
+│       ├── _config.yml     # Theme configuration
+│       ├── layout/         # EJS templates
+│       ├── source/         # Theme assets (CSS, JS, fonts)
+│       └── languages/      # i18n files
+├── public/                  # Generated static site (gitignored)
+├── node_modules/           # Node dependencies (gitignored)
+└── .deploy_git/            # Deployment temp directory
 ```
 
-## Content Organization
+### Content Organization
 
-### Blog Posts
-- Posts are organized by date: `/YYYY/MM/DD/post-name/index.html`
-- Each post has its own directory with an `index.html` file
-- Post URLs are clean (without `.html` extension in the path)
+#### Blog Posts
+- Location: `source/_posts/`
+- Format: Markdown with YAML front-matter
+- URL Pattern: `/:year/:month/:day/:title/`
+- Example: `/2025/11/12/innodb/`
 
-### Categories & Tags
-- Categories: Blog posts can be organized into categories (e.g., "数据库")
-- Tags: Posts can have multiple tags for better discoverability
-- Both categories and tags have their own index pages
+#### Drafts
+- Location: `source/_drafts/`
+- Drafts are not published until moved to `_posts/`
+
+#### Multilingual Support
+- Primary: Chinese (zh-CN)
+- Secondary: English content in `source/en/`
+- Language switcher available in navigation
 
 ### URL Patterns
 | Page Type | URL Pattern |
 |-----------|-------------|
 | Home | `/` |
-| Post | `/YYYY/MM/DD/post-name/` |
+| Post | `/:year/:month/:day/:title/` |
 | About | `/about/` |
 | Archives | `/archives/` |
-| Year Archive | `/archives/YYYY/` |
-| Category | `/categories/category-name/` |
-| Tag | `/tags/tag-name/` |
+| Year Archive | `/archives/:year/` |
+| Category | `/categories/:name/` |
+| Tag | `/tags/:name/` |
 | RSS Feed | `/atom.xml` |
 
-## Development Workflow
+## Build and Development Commands
 
-> **Important**: This repository contains the **generated static files**, not the Hexo source files. The actual source (Markdown posts, theme config, _config.yml) is maintained in a separate repository or local environment.
-
-### How Content is Published
-1. Author writes posts in Markdown in the Hexo source project
-2. Run `hexo generate` to build static files
-3. Run `hexo deploy` or manually push generated files to this repository
-4. GitHub Pages automatically serves the content
-
-### Typical Hexo Commands (for reference)
+### Prerequisites
 ```bash
-# Create a new post
-hexo new post "Post Title"
+# Install Node.js 18+ first, then:
+npm install
+```
 
-# Generate static files
-hexo generate
+### Available Scripts
+```bash
+# Build the site (generate static files)
+npm run build
+# or: hexo generate
 
-# Start local server for preview
+# Clean generated files
+npm run clean
+# or: hexo clean
+
+# Deploy to GitHub Pages
+npm run deploy
+# or: hexo deploy
+
+# Start development server
+npm run server
+# or: hexo server
+
+# Full deployment with git commit (custom script)
+./deploy.sh
+```
+
+### Development Server
+```bash
+# Start local server at http://localhost:4000
 hexo server
+
+# With live reload
+hexo server --watch
+```
+
+## Content Creation
+
+### Creating a New Post
+```bash
+hexo new post "Post Title"
+```
+This creates `source/_posts/Post-Title.md` with template:
+```markdown
+---
+title: Post Title
+date: 2024-01-01 00:00:00
+tags:
+---
+```
+
+### Creating a Draft
+```bash
+hexo new draft "Draft Title"
+```
+Creates `source/_drafts/Draft-Title.md`
+
+### Publishing a Draft
+```bash
+hexo publish draft "Draft Title"
+```
+Moves the draft from `_drafts/` to `_posts/`
+
+### Creating a Page
+```bash
+hexo new page "Page Name"
+```
+Creates `source/page-name/index.md`
+
+### Front-matter Options
+```yaml
+---
+title: Post Title              # Required
+date: 2024-01-01 00:00:00      # Required
+tags: [tag1, tag2]             # Optional
+categories: category-name      # Optional
+lang: zh-CN                    # Optional (zh-CN or en)
+comments: true                 # Optional (default: true)
+---
+```
+
+## Theme Configuration
+
+### Cactus Theme Settings
+Theme config is in `_config.yml` under `theme_config:` section (overrides theme defaults):
+
+```yaml
+theme_config:
+  # Navigation
+  nav:
+    home: /
+    about: /about/
+    articles: /archives/
+    projects: https://github.com/Aqiu16717
+
+  # Color scheme: dark, light, classic, white
+  colorscheme: dark
+
+  # Logo
+  logo:
+    enabled: true
+    url: /images/logo.jpg
+
+  # Social links
+  social_links:
+    - icon: github
+      link: https://github.com/Aqiu16717
+    - icon: mail
+      link: mailto:aqiu16717@gmail.com
+
+  # Posts on homepage
+  posts_overview:
+    show_all_posts: false
+    post_count: 5
+
+  # Copyright
+  copyright:
+    start_year: 2024
+
+  # Giscus comments
+  giscus:
+    enabled: true
+    repo: Aqiu16717/Aqiu16717.github.io
+    repo_id: R_kgDOHKvpgw
+    category: Announcements
+    category_id: DIC_kwDOHKvpg84C1uo1
+```
+
+### Color Schemes Available
+- `dark` (current) - Dark background with light text
+- `light` - Light background with dark text
+- `classic` - Sepia-toned classic look
+- `white` - Clean white background
+
+## Deployment Process
+
+### Automated Deployment (Recommended)
+```bash
+./deploy.sh
+```
+This script:
+1. Cleans previous build (`hexo clean`)
+2. Generates and deploys to GitHub Pages (`hexo deploy`)
+3. Commits source changes to git with timestamp message
+4. Pushes to `source` branch
+
+### Manual Deployment
+```bash
+# Generate static files
+hexo clean
+hexo generate
 
 # Deploy to GitHub Pages
 hexo deploy
 ```
 
-## File Modification Guidelines
-
-### Safe to Modify Directly
-- **images/** - Add new images or replace existing ones
-- **css/style.css** - Custom CSS (note: theme updates may overwrite)
-- **lib/** - Update third-party libraries (maintain same structure)
-
-### Do NOT Modify Directly
-- HTML files in post directories (will be overwritten on next generate)
-- Archives, category, and tag index pages (auto-generated)
-- `atom.xml` (auto-generated)
-
-### Adding New Posts
-Since this is the generated output repository:
-1. Modify the **Hexo source project** instead
-2. Or manually create a new post directory following the existing structure
-3. Update related index pages (homepage, archives, categories, tags, RSS)
-
-## Key Features
-
-### 1. Responsive Navigation
-- Mobile-friendly hamburger menu
-- Auto-hiding navigation on scroll (desktop)
-- Sticky footer navigation on mobile
-
-### 2. Social Sharing
-- Share buttons for: Facebook, Twitter, LinkedIn, Pinterest, Email, Pocket, Reddit, StumbleUpon, Digg, Tumblr, HackerNews
-- Appears on every blog post
-
-### 3. Table of Contents (TOC)
-- Auto-generated TOC for posts with headings
-- Desktop: Sidebar TOC
-- Mobile: Footer TOC toggle
-
-### 4. Code Copy
-- "Copy to clipboard" button on all code blocks
-- Visual feedback on successful copy
-
-### 5. Comments (Giscus)
-- GitHub Discussions-based commenting
-- Configured repository: `Aqiu16717/Aqiu16717.github.io`
-- Language: Chinese (zh-CN)
-
-### 6. Local Search
-- Client-side search functionality
-- Searches through post titles and content
-- Results displayed with context snippets
-
-### 7. RSS Feed
-- Atom format feed at `/atom.xml`
-- Includes all published posts with metadata
+### Git Branches
+- `main` - Contains generated static files (deployed to GitHub Pages)
+- `source` - Contains Hexo source files (posts, config, themes)
 
 ## Code Style Guidelines
 
-### HTML
-- Indentation: 2 spaces
-- Semantic HTML5 elements
-- Schema.org microdata for SEO (`itemscope`, `itemtype`, `itemprop`)
-- h-card microformat for author information
+### Markdown Writing
+- Use Chinese for primary content
+- Use English for technical terms where appropriate
+- Include front-matter in all posts
+- Use tags for better discoverability
 
-### CSS
-- Main stylesheet uses a utility-first approach (similar to Basscss)
-- Class naming: lowercase with hyphens
-- RTL support via separate `rtl.css`
+### File Naming
+- Post files: kebab-case (e.g., `my-post-title.md`)
+- Images: descriptive names (e.g., `figure1.png`, `architecture-diagram.png`)
 
-### JavaScript
-- jQuery-based
-- Comments in English (inherited from theme)
-- Event delegation for dynamic elements
+### Image Placement
+- Static images: `source/images/`
+- Reference in posts: `/images/filename.png`
 
-## SEO & Meta Tags
+## Testing Strategy
 
-Each page includes:
-- Open Graph tags (`og:*`)
-- Twitter Card tags
-- Article metadata (published time, modified time, author, tags)
-- Viewport meta for mobile
-- Canonical URLs
+### Before Deployment
+1. **Local Preview**: Run `hexo server` and verify at `http://localhost:4000`
+2. **Link Check**: Verify internal links work
+3. **Image Check**: Ensure all images display correctly
+4. **Mobile Test**: Check responsive design in mobile view
+5. **RSS Validation**: Verify `/atom.xml` is accessible
 
-## Browser Support
-
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- IE 11+ (with polyfills)
-- Mobile browsers (iOS Safari, Chrome Mobile)
-
-## Deployment
-
-- **Platform**: GitHub Pages
-- **Branch**: `main` (default)
-- **Custom Domain**: Not configured (uses default github.io domain)
-- **HTTPS**: Enabled by default
+### After Deployment
+1. **Live Site Check**: Visit `https://aqiu16717.github.io/`
+2. **Comments Test**: Verify Giscus loads on posts
+3. **RSS Feed**: Subscribe test with feed reader
+4. **Social Links**: Verify all external links work
 
 ## Security Considerations
 
-1. **No sensitive data** should be stored in this repository
-2. All user input (comments) goes through Giscus/GitHub
-3. Third-party scripts loaded from CDNs:
+1. **No sensitive data** in repository (no API keys, passwords)
+2. All comments through Giscus/GitHub (trusted platform)
+3. Third-party resources loaded via CDN:
    - Giscus client from `giscus.app`
-   - All other libraries are self-hosted in `/lib/`
+   - Other libraries from `cdnjs.cloudflare.com`
+4. External links open in new tab (`target="_blank"` with `rel="noopener"`)
 
 ## Maintenance Notes
 
-### When Updating Theme
-1. Backup custom modifications in `css/style.css`
-2. Re-apply custom CSS after theme update
-3. Verify all pages render correctly
+### Updating Dependencies
+```bash
+# Check outdated packages
+npm outdated
 
-### When Adding Features
-- Keep changes minimal and non-breaking
-- Test on both desktop and mobile
-- Ensure RSS feed remains valid
+# Update Hexo and plugins
+npm update
+```
+
+Dependabot is configured to check for updates daily (see `.github/dependabot.yml`).
+
+### Theme Updates
+1. Review customizations in `_config.yml`
+2. Check Cactus theme releases: https://github.com/probberechts/hexo-theme-cactus
+3. Test thoroughly after theme update
+
+### Adding New Features
+1. Keep changes minimal (KISS principle)
+2. Test on local server first
+3. Verify mobile responsiveness
+4. Update this AGENTS.md if needed
+
+## Useful Resources
+
+- **Hexo Documentation**: https://hexo.io/docs/
+- **Cactus Theme**: https://github.com/probberechts/hexo-theme-cactus
+- **Giscus Setup**: https://giscus.app/
+- **Markdown Guide**: https://www.markdownguide.org/
 
 ## Contact & Links
 
@@ -249,4 +351,5 @@ Each page includes:
 
 ---
 
-*This file was generated for AI coding agents working on the project. For the actual blog content and Hexo source, please refer to the separate source repository or the author's local development environment.*
+*Last updated: 2026-04-12*
+*This file is maintained for AI coding agents working on the project.*
