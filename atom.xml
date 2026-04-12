@@ -6,7 +6,7 @@
   <link href="https://aqiu16717.github.io/atom.xml" rel="self"/>
   
   <link href="https://aqiu16717.github.io/"/>
-  <updated>2026-04-12T02:43:33.931Z</updated>
+  <updated>2026-04-12T13:13:43.542Z</updated>
   <id>https://aqiu16717.github.io/</id>
   
   <author>
@@ -17,17 +17,26 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>claude code 源码剖析</title>
-    <link href="https://aqiu16717.github.io/2026/04/12/claude-code/"/>
-    <id>https://aqiu16717.github.io/2026/04/12/claude-code/</id>
-    <published>2026-04-12T02:42:08.000Z</published>
-    <updated>2026-04-12T02:43:33.931Z</updated>
+    <title>raft-enginer.md</title>
+    <link href="https://aqiu16717.github.io/2026/04/12/raft-engineering/"/>
+    <id>https://aqiu16717.github.io/2026/04/12/raft-engineering/</id>
+    <published>2026-04-12T13:03:28.000Z</published>
+    <updated>2026-04-12T13:13:43.542Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;h2 id=&quot;读请求优化&quot;&gt;&lt;a href=&quot;#读请求优化&quot; class=&quot;headerlink&quot; title=&quot;读请求优化&quot;&gt;&lt;/a&gt;读请求优化&lt;/h2&gt;&lt;p&gt;按照最朴素的实现，读请求也需要像写请求一样走一遍日志复制流程，但这显然太慢了。&lt;/p&gt;
+&lt;p&gt;Raft</summary>
+        
+      
     
     
     
     
-    
-    <category term="AI,agent,claude code" scheme="https://aqiu16717.github.io/tags/AI-agent-claude-code/"/>
+    <category term="raft" scheme="https://aqiu16717.github.io/tags/raft/"/>
     
   </entry>
   

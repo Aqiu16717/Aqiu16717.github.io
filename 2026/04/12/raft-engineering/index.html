@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="读请求优化按照最朴素的实现，读请求也需要像写请求一样走一遍日志复制流程，但这显然太慢了。 Raft 必须保证线性一致性（Linearizability），即：一旦一个值被返回，后续所有的读请求都必须看到这个值或更新的值。 单纯从 Leader 读取会面临 脑裂（Split Brain） 风险：  假设 Leader A 被分区隔离了，其他节点选出了新 Leader B。 但 Leader A 此时">
+<meta property="og:type" content="article">
+<meta property="og:title" content="raft-enginer.md">
+<meta property="og:url" content="https://aqiu16717.github.io/2026/04/12/raft-engineering/index.html">
+<meta property="og:site_name" content="aq1u&#39;s blog">
+<meta property="og:description" content="读请求优化按照最朴素的实现，读请求也需要像写请求一样走一遍日志复制流程，但这显然太慢了。 Raft 必须保证线性一致性（Linearizability），即：一旦一个值被返回，后续所有的读请求都必须看到这个值或更新的值。 单纯从 Leader 读取会面临 脑裂（Split Brain） 风险：  假设 Leader A 被分区隔离了，其他节点选出了新 Leader B。 但 Leader A 此时">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-04-12T13:03:28.000Z">
+<meta property="article:modified_time" content="2026-04-12T13:13:43.542Z">
+<meta property="article:author" content="aq1u">
+<meta property="article:tag" content="raft">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/assets/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/assets/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/assets/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>raft-enginer.md</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.0.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
+     -->
+        <!-- 语言切换 -->
+        
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="切换语言">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code">中</span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="/2026/04/12/raft-engineering/" class="active">中文</a></li>
+            <li><a href="/en/2026/04/12/raft-engineering-en/" class="">English</a></li>
+          </ul>
+        </li>
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2026/04/10/asio-timer/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&text=raft-enginer.md"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&is_video=false&description=raft-enginer.md"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=raft-enginer.md&body=Check out this article: https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&name=raft-enginer.md&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/&t=raft-enginer.md"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E8%AF%B7%E6%B1%82%E4%BC%98%E5%8C%96"><span class="toc-number">1.</span> <span class="toc-text">读请求优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E6%96%B9%E6%A1%88"><span class="toc-number">1.1.</span> <span class="toc-text">优化方案</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#A-Read-Index"><span class="toc-number">1.1.1.</span> <span class="toc-text">A. Read Index</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#B-Lease-Read"><span class="toc-number">1.1.2.</span> <span class="toc-text">B. Lease Read</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#C-Follower-Read-%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1"><span class="toc-number">1.1.3.</span> <span class="toc-text">C. Follower Read (负载均衡)</span></a></li></ol></li></ol></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        raft-enginer.md
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">aq1u</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2026-04-12T13:03:28.000Z" class="dt-published" itemprop="datePublished">2026-04-12</time>
+        
+        (Updated: <time datetime="2026-04-12T13:13:43.542Z" class="dt-updated" itemprop="dateModified">2026-04-12</time>)
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/raft/" rel="tag">raft</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <h2 id="读请求优化"><a href="#读请求优化" class="headerlink" title="读请求优化"></a>读请求优化</h2><p>按照最朴素的实现，读请求也需要像写请求一样走一遍日志复制流程，但这显然太慢了。</p>
+<p>Raft 必须保证线性一致性（Linearizability），即：一旦一个值被返回，后续所有的读请求都必须看到这个值或更新的值。</p>
+<p>单纯从 Leader 读取会面临 脑裂（Split Brain） 风险：</p>
+<ul>
+<li>假设 Leader A 被分区隔离了，其他节点选出了新 Leader B。</li>
+<li>但 Leader A 此时还不知道自己“下课”了（在心跳超时前）。</li>
+<li>如果客户端去 A 读数据，A 可能会返回旧的（Stale）数据，破坏了一致性。</li>
+</ul>
+<h3 id="优化方案"><a href="#优化方案" class="headerlink" title="优化方案"></a>优化方案</h3><p>为了不走完整的日志复制，通常采用以下三种优化：</p>
+<h4 id="A-Read-Index"><a href="#A-Read-Index" class="headerlink" title="A. Read Index"></a>A. Read Index</h4><p>它不写日志，但要确认自己还是 Leader。</p>
+<ol>
+<li><strong>记录 CommitIndex</strong>：Leader 收到读请求时，记录当前的 <code>commitIndex</code> 作为 <code>readIndex</code>。</li>
+<li><strong>确认地位</strong>：Leader 向大多数节点发起一轮心跳。</li>
+<li><strong>等待应用</strong>：一旦确认为多数派通过，说明自己确实是 Leader。Leader 等待本地状态机执行到（Apply）至少 <code>readIndex</code> 这个位置。</li>
+<li><strong>返回结果</strong>：从状态机读取并返回。<blockquote>
+<p><strong>优势</strong>：省去了磁盘 IO（不用写日志），但仍有网络开销。</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="B-Lease-Read"><a href="#B-Lease-Read" class="headerlink" title="B. Lease Read"></a>B. Lease Read</h4><p>利用<strong>时钟同步</strong>（或者说时间租约）来进一步压榨性能。</p>
+<ol>
+<li><strong>租约机制</strong>：Leader 发起心跳并获得多数派响应后，在接下来的一个固定时间（如 200ms）内，它确信不会有新 Leader 产生。</li>
+<li><strong>直接读</strong>：在这个租约（Lease）有效期内，Leader 处理读请求不需要任何网络通信，直接查状态机。<blockquote>
+<p><strong>风险</strong>：强依赖各机器的 CPU 时钟率。如果某台机器发生了严重的 <strong>GC 停顿（STW）</strong> 或时钟漂移，可能导致租约失效引发脏读。</p>
+</blockquote>
+</li>
+</ol>
+<h4 id="C-Follower-Read-负载均衡"><a href="#C-Follower-Read-负载均衡" class="headerlink" title="C. Follower Read (负载均衡)"></a>C. Follower Read (负载均衡)</h4><p>为了减轻 Leader 的压力，让 Follower 也承担读任务。</p>
+<ol>
+<li><strong>询问 Leader</strong>：Follower 收到读请求，向 Leader 询问当前的 <code>readIndex</code>。</li>
+<li><strong>对齐进度</strong>：Follower 等待自己的 <code>lastApplied</code> 追上这个 <code>readIndex</code>。</li>
+<li><strong>本地读取</strong>：在本地状态机读取结果并返回。<blockquote>
+<p><strong>意义</strong>：这并没有减少网络开销，但极大地分散了 Leader 的 CPU 和内存带宽压力。</p>
+</blockquote>
+</li>
+</ol>
+
+  </div>
+</article>
+
+
+
+    <div class="blog-post-comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="Aqiu16717/Aqiu16717.github.io"
+            data-repo-id="R_kgDOHKvpgw"
+            data-category="Announcements"
+            data-category-id="DIC_kwDOHKvpg84C1uo1"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="preferred_color_scheme"
+
+            
+            
+            
+            data-lang="zh-CN"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AF%BB%E8%AF%B7%E6%B1%82%E4%BC%98%E5%8C%96"><span class="toc-number">1.</span> <span class="toc-text">读请求优化</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%8C%96%E6%96%B9%E6%A1%88"><span class="toc-number">1.1.</span> <span class="toc-text">优化方案</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#A-Read-Index"><span class="toc-number">1.1.1.</span> <span class="toc-text">A. Read Index</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#B-Lease-Read"><span class="toc-number">1.1.2.</span> <span class="toc-text">B. Lease Read</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#C-Follower-Read-%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1"><span class="toc-number">1.1.3.</span> <span class="toc-text">C. Follower Read (负载均衡)</span></a></li></ol></li></ol></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&text=raft-enginer.md"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&is_video=false&description=raft-enginer.md"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=raft-enginer.md&body=Check out this article: https://aqiu16717.github.io/2026/04/12/raft-engineering/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&title=raft-enginer.md"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/04/12/raft-engineering/&name=raft-enginer.md&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/04/12/raft-engineering/&t=raft-enginer.md"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <!-- 语言切换 -->
+        
+        <a id="lang-switch-mobile" class="icon" href="/en/2026/04/12/raft-engineering-en/">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> EN
+        </a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-center">
+    Copyright &copy;
+    
+    
+    2024-2026
+    aq1u
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+ 
+  <link
+    rel="preload"
+    href="/lib/font-awesome/css/all.min.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="/lib/font-awesome/css/all.min.css"
+  /></noscript>
+
+
+    <!-- jquery -->
+
+  
+<script src="/lib/jquery/jquery.min.js"></script>
+
+
+
+
+
+<!-- clipboard -->
+
+  
+    
+<script src="/lib/clipboard/clipboard.min.js"></script>
+
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
