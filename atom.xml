@@ -6,7 +6,7 @@
   <link href="https://aqiu16717.github.io/atom.xml" rel="self"/>
   
   <link href="https://aqiu16717.github.io/"/>
-  <updated>2026-04-12T12:32:46.394Z</updated>
+  <updated>2026-04-12T02:43:33.931Z</updated>
   <id>https://aqiu16717.github.io/</id>
   
   <author>
@@ -15,27 +15,6 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
-  
-  <entry>
-    <title>transformer 译文</title>
-    <link href="https://aqiu16717.github.io/2026/04/12/transformer/"/>
-    <id>https://aqiu16717.github.io/2026/04/12/transformer/</id>
-    <published>2026-04-12T12:18:47.000Z</published>
-    <updated>2026-04-12T12:32:46.394Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;h1 id=&quot;Attention-Is-All-You-Need&quot;&gt;&lt;a href=&quot;#Attention-Is-All-You-Need&quot; class=&quot;headerlink&quot; title=&quot;Attention Is All You Need&quot;&gt;&lt;/a&gt;Attention</summary>
-        
-      
-    
-    
-    
-    
-  </entry>
   
   <entry>
     <title>claude code 源码剖析</title>
