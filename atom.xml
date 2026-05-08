@@ -6,7 +6,7 @@
   <link href="https://aqiu16717.github.io/atom.xml" rel="self"/>
   
   <link href="https://aqiu16717.github.io/"/>
-  <updated>2026-05-08T05:16:37.741Z</updated>
+  <updated>2026-05-08T13:26:48.923Z</updated>
   <id>https://aqiu16717.github.io/</id>
   
   <author>
@@ -15,6 +15,121 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>InnoDB 行锁详解</title>
+    <link href="https://aqiu16717.github.io/2026/05/08/innodb-row-lock/"/>
+    <id>https://aqiu16717.github.io/2026/05/08/innodb-row-lock/</id>
+    <published>2026-05-08T10:00:00.000Z</published>
+    <updated>2026-05-08T13:26:48.923Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：&lt;strong&gt;行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上&lt;/strong&gt;。理解这一点，是搞懂 InnoDB 并发行为的前提。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
+    
+    <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="行锁" scheme="https://aqiu16717.github.io/tags/%E8%A1%8C%E9%94%81/"/>
+    
+    <category term="事务" scheme="https://aqiu16717.github.io/tags/%E4%BA%8B%E5%8A%A1/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>为什么 MySQL 更新主键是大忌，而 PG/Oracle 却很轻松？</title>
+    <link href="https://aqiu16717.github.io/2026/05/08/update-primary-key-mysql-vs-pg/"/>
+    <id>https://aqiu16717.github.io/2026/05/08/update-primary-key-mysql-vs-pg/</id>
+    <published>2026-05-08T09:00:00.000Z</published>
+    <updated>2026-05-08T13:14:33.592Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;同一条 &lt;code&gt;UPDATE users SET id = 999 WHERE id = 1&lt;/code&gt;，在 MySQL 里可能是性能灾难，在 PostgreSQL 里却平平无奇。根源不在 SQL 层，而在&lt;strong&gt;数据怎么落盘&lt;/strong&gt;。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://aqiu16717.github.io/tags/PostgreSQL/"/>
+    
+    <category term="Oracle" scheme="https://aqiu16717.github.io/tags/Oracle/"/>
+    
+    <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
+    
+    <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
+    
+    <category term="存储引擎" scheme="https://aqiu16717.github.io/tags/%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/"/>
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="主键" scheme="https://aqiu16717.github.io/tags/%E4%B8%BB%E9%94%AE/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>MySQL MDL 为什么要区分 shared_read 与 shared_write？</title>
+    <link href="https://aqiu16717.github.io/2026/05/08/mysql-mdl-shared-read-write/"/>
+    <id>https://aqiu16717.github.io/2026/05/08/mysql-mdl-shared-read-write/</id>
+    <published>2026-05-08T08:00:00.000Z</published>
+    <updated>2026-05-08T12:58:58.400Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;MySQL 的 MDL（Metadata Lock）里有两个看起来很像的锁类型：&lt;code&gt;SHARED_READ&lt;/code&gt;（SR）和 &lt;code&gt;SHARED_WRITE&lt;/code&gt;（SW）。它们都不会修改表结构，本质上都是”对元数据只读”。那为什么要根据业务语句是读数据还是写数据，把元数据锁拆成两种？&lt;/p&gt;
+&lt;p&gt;要理解这个设计的必要性，得从”如果不拆分会怎样”开始想。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
+    
+    <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="MDL" scheme="https://aqiu16717.github.io/tags/MDL/"/>
+    
+    <category term="锁" scheme="https://aqiu16717.github.io/tags/%E9%94%81/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学</title>
+    <link href="https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/"/>
+    <id>https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/</id>
+    <published>2026-05-08T07:00:00.000Z</published>
+    <updated>2026-05-08T12:33:22.232Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用&lt;strong&gt;堆表（Heap Table）&lt;/strong&gt;，而 MySQL InnoDB 默认用&lt;strong&gt;索引组织表（IOT，Index-Organized Table）&lt;/strong&gt;。两种设计没有绝对的优劣，只有不同的取舍。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="PostgreSQL" scheme="https://aqiu16717.github.io/tags/PostgreSQL/"/>
+    
+    <category term="Oracle" scheme="https://aqiu16717.github.io/tags/Oracle/"/>
+    
+    <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
+    
+    <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
+    
+    <category term="存储引擎" scheme="https://aqiu16717.github.io/tags/%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/"/>
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+  </entry>
   
   <entry>
     <title>Paxos vs Raft：共识算法的两面</title>
@@ -31,6 +146,8 @@
     <category term="分布式系统" scheme="https://aqiu16717.github.io/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
     
     
+    <category term="Paxos" scheme="https://aqiu16717.github.io/tags/Paxos/"/>
+    
     <category term="Raft" scheme="https://aqiu16717.github.io/tags/Raft/"/>
     
     <category term="共识算法" scheme="https://aqiu16717.github.io/tags/%E5%85%B1%E8%AF%86%E7%AE%97%E6%B3%95/"/>
@@ -39,8 +156,6 @@
     
     <category term="分布式系统" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
     
-    <category term="Paxos" scheme="https://aqiu16717.github.io/tags/Paxos/"/>
-    
   </entry>
   
   <entry>
@@ -48,7 +163,7 @@
     <link href="https://aqiu16717.github.io/2026/04/12/raft-engineering/"/>
     <id>https://aqiu16717.github.io/2026/04/12/raft-engineering/</id>
     <published>2026-04-12T13:03:28.000Z</published>
-    <updated>2026-04-12T14:50:11.150Z</updated>
+    <updated>2026-05-08T05:27:26.287Z</updated>
     
     
       
@@ -119,6 +234,39 @@
   </entry>
   
   <entry>
+    <title>Understanding Snapshot Isolation Level</title>
+    <link href="https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"/>
+    <id>https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html</id>
+    <published>2026-02-09T15:30:00.000Z</published>
+    <updated>2026-04-10T05:19:44.733Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;h1 id=&quot;Snapshot-Isolation&quot;&gt;&lt;a href=&quot;#Snapshot-Isolation&quot; class=&quot;headerlink&quot; title=&quot;Snapshot Isolation&quot;&gt;&lt;/a&gt;Snapshot</summary>
+        
+      
+    
+    
+    
+    <category term="database" scheme="https://aqiu16717.github.io/categories/database/"/>
+    
+    
+    <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
+    
+    <category term="transaction" scheme="https://aqiu16717.github.io/tags/transaction/"/>
+    
+    <category term="isolation level" scheme="https://aqiu16717.github.io/tags/isolation-level/"/>
+    
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
+    <category term="concurrency control" scheme="https://aqiu16717.github.io/tags/concurrency-control/"/>
+    
+  </entry>
+  
+  <entry>
     <title>快照隔离级别（Snapshot Isolation）详解</title>
     <link href="https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"/>
     <id>https://aqiu16717.github.io/2026/02/09/snapshot-isolation/</id>
@@ -143,42 +291,9 @@
     
     <category term="事务" scheme="https://aqiu16717.github.io/tags/%E4%BA%8B%E5%8A%A1/"/>
     
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
     <category term="隔离级别" scheme="https://aqiu16717.github.io/tags/%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB/"/>
-    
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Understanding Snapshot Isolation Level</title>
-    <link href="https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"/>
-    <id>https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html</id>
-    <published>2026-02-09T15:30:00.000Z</published>
-    <updated>2026-04-10T05:19:44.733Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;h1 id=&quot;Snapshot-Isolation&quot;&gt;&lt;a href=&quot;#Snapshot-Isolation&quot; class=&quot;headerlink&quot; title=&quot;Snapshot Isolation&quot;&gt;&lt;/a&gt;Snapshot</summary>
-        
-      
-    
-    
-    
-    <category term="database" scheme="https://aqiu16717.github.io/categories/database/"/>
-    
-    
-    <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
-    
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
-    
-    <category term="transaction" scheme="https://aqiu16717.github.io/tags/transaction/"/>
-    
-    <category term="isolation level" scheme="https://aqiu16717.github.io/tags/isolation-level/"/>
-    
-    <category term="concurrency control" scheme="https://aqiu16717.github.io/tags/concurrency-control/"/>
     
   </entry>
   

@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用堆表（Heap Table），而 MySQL InnoDB 默认用索引组织表（IOT，Index-Organized Table）。两种设计没有绝对的优劣，只有不同的取舍。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="堆表 vs IOT：PG&#x2F;Oracle 与 MySQL 的存储哲学">
+<meta property="og:url" content="https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/index.html">
+<meta property="og:site_name" content="aq1u&#39;s blog">
+<meta property="og:description" content="关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用堆表（Heap Table），而 MySQL InnoDB 默认用索引组织表（IOT，Index-Organized Table）。两种设计没有绝对的优劣，只有不同的取舍。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-08T07:00:00.000Z">
+<meta property="article:modified_time" content="2026-05-08T12:33:22.232Z">
+<meta property="article:author" content="aq1u">
+<meta property="article:tag" content="InnoDB">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="Oracle">
+<meta property="article:tag" content="PostgreSQL">
+<meta property="article:tag" content="存储引擎">
+<meta property="article:tag" content="数据库">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/assets/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/assets/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/assets/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.0.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
+     -->
+        <!-- 语言切换 -->
+        
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="切换语言">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code">中</span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="/2026/05/08/heap-table-vs-iot/" class="active">中文</a></li>
+            <li><a href="/en/2026/05/08/heap-table-vs-iot-en/" class="">English</a></li>
+          </ul>
+        </li>
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li><a class="icon" aria-label="上一篇" href="/2026/05/08/mysql-mdl-shared-read-write/"><i class="fa-solid fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2026/05/08/paxos-vs-raft/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&text=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&is_video=false&description=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学&body=Check out this article: https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&name=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学&description=&lt;p&gt;关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用&lt;strong&gt;堆表（Heap Table）&lt;/strong&gt;，而 MySQL InnoDB 默认用&lt;strong&gt;索引组织表（IOT，Index-Organized Table）&lt;/strong&gt;。两种设计没有绝对的优劣，只有不同的取舍。&lt;/p&gt;"><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&t=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="toc-number">1.</span> <span class="toc-text">1. 核心概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E5%A0%86%E8%A1%A8%EF%BC%88Heap-Table%EF%BC%89"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 堆表（Heap Table）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-IOT-%E8%81%9A%E7%B0%87%E7%B4%A2%E5%BC%95%E8%A1%A8"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 IOT &#x2F; 聚簇索引表</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-number">2.</span> <span class="toc-text">2. 查询性能对比</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E4%B8%BB%E9%94%AE%E7%B2%BE%E7%A1%AE%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 主键精确查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E4%BA%8C%E7%BA%A7%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 二级索引查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E8%8C%83%E5%9B%B4%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 范围查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 全表扫描</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%86%99%E5%85%A5%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-number">3.</span> <span class="toc-text">3. 写入性能对比</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E6%8F%92%E5%85%A5%E6%96%B0%E8%A1%8C"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 插入新行</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E6%9B%B4%E6%96%B0%E6%93%8D%E4%BD%9C"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 更新操作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E5%88%A0%E9%99%A4"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 删除</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%A2%8E%E7%89%87"><span class="toc-number">4.</span> <span class="toc-text">4. 空间与碎片</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E7%A9%BA%E9%97%B4%E5%88%A9%E7%94%A8%E7%8E%87"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 空间利用率</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E8%A1%A8%E4%B8%8E%E7%B4%A2%E5%BC%95%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 表与索引的关系</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%80%E4%BA%9B%E5%85%B7%E4%BD%93%E5%9C%BA%E6%99%AF"><span class="toc-number">5.</span> <span class="toc-text">5. 一些具体场景</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E8%A6%86%E7%9B%96%E7%B4%A2%E5%BC%95%EF%BC%88Covering-Index%EF%BC%89"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 覆盖索引（Covering Index）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E6%B2%A1%E6%9C%89%E4%B8%BB%E9%94%AE%E7%9A%84%E6%9F%A5%E8%AF%A2%E8%A1%A8-%E6%97%A5%E5%BF%97%E8%A1%A8"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 没有主键的查询表 &#x2F; 日志表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E4%B8%BB%E9%94%AE%E9%AB%98%E9%A2%91%E8%8C%83%E5%9B%B4%E6%89%AB%E6%8F%8F%E7%9A%84-OLTP"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 主键高频范围扫描的 OLTP</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E8%83%BD%E4%B8%8D%E8%83%BD%E6%8D%A2%E4%B8%80%E6%9D%A1%E8%B7%AF%EF%BC%9F"><span class="toc-number">6.</span> <span class="toc-text">6. 能不能换一条路？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-Oracle%EF%BC%9A%E4%B8%A4%E8%80%85%E7%9A%86%E5%8F%AF"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 Oracle：两者皆可</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-PostgreSQL%EF%BC%9A%E5%8E%9F%E7%94%9F%E5%8F%AA%E6%9C%89%E5%A0%86%E8%A1%A8"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 PostgreSQL：原生只有堆表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-MySQL%EF%BC%9A%E5%8E%9F%E7%94%9F%E5%8F%AA%E6%9C%89-IOT"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 MySQL：原生只有 IOT</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%80%BB%E7%BB%93"><span class="toc-number">7.</span> <span class="toc-text">7. 总结</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E5%8F%A5%E8%AF%9D%E6%A6%82%E6%8B%AC"><span class="toc-number">7.1.</span> <span class="toc-text">一句话概括</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">8.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">aq1u</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2026-05-08T07:00:00.000Z" class="dt-published" itemprop="datePublished">2026-05-08</time>
+        
+        (Updated: <time datetime="2026-05-08T12:33:22.232Z" class="dt-updated" itemprop="dateModified">2026-05-08</time>)
+        
+      
+    </div>
+
+
+      
+    <div class="article-category">
+        <i class="fa-solid fa-archive"></i>
+        <a class="category-link" href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+    </div>
+
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/InnoDB/" rel="tag">InnoDB</a>, <a class="p-category" href="/tags/MySQL/" rel="tag">MySQL</a>, <a class="p-category" href="/tags/Oracle/" rel="tag">Oracle</a>, <a class="p-category" href="/tags/PostgreSQL/" rel="tag">PostgreSQL</a>, <a class="p-category" href="/tags/%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/" rel="tag">存储引擎</a>, <a class="p-category" href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" rel="tag">数据库</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用<strong>堆表（Heap Table）</strong>，而 MySQL InnoDB 默认用<strong>索引组织表（IOT，Index-Organized Table）</strong>。两种设计没有绝对的优劣，只有不同的取舍。</p>
+<span id="more"></span>
+
+<h2 id="1-核心概念"><a href="#1-核心概念" class="headerlink" title="1. 核心概念"></a>1. 核心概念</h2><h3 id="1-1-堆表（Heap-Table）"><a href="#1-1-堆表（Heap-Table）" class="headerlink" title="1.1 堆表（Heap Table）"></a>1.1 堆表（Heap Table）</h3><p>堆表把数据当作一个<strong>无序的数据页集合</strong>。你插入一行，数据库就把它放到当前有空闲空间的某个页里，完全不关心主键是什么、插入顺序如何。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">+--------------------+--------------------+--------------------+</span><br><span class="line">|      Page 1        |      Page 2        |      Page 3        |</span><br><span class="line">+--------------------+--------------------+--------------------+</span><br><span class="line">|   row(id=3)        |   row(id=1)        |   row(id=5)        |</span><br><span class="line">|   row(id=7)        |   row(id=2)        |   row(id=4)        |</span><br><span class="line">+--------------------+--------------------+--------------------+</span><br><span class="line">           ↑</span><br><span class="line">    Primary Key Index (B+ Tree)</span><br><span class="line">    +---------+-----------------+</span><br><span class="line">    |   key   |      value      |</span><br><span class="line">    +---------+-----------------+</span><br><span class="line">    |  id=1   | page_2, slot_1  |</span><br><span class="line">    |  id=2   | page_2, slot_2  |</span><br><span class="line">    |  id=3   | page_1, slot_1  |</span><br><span class="line">    +---------+-----------------+</span><br></pre></td></tr></table></figure>
+
+<p><strong>代表</strong>：PostgreSQL（始终）、Oracle（默认）、SQL Server（堆表可选）</p>
+<h3 id="1-2-IOT-聚簇索引表"><a href="#1-2-IOT-聚簇索引表" class="headerlink" title="1.2 IOT &#x2F; 聚簇索引表"></a>1.2 IOT &#x2F; 聚簇索引表</h3><p>IOT 把数据直接存在主键索引的叶子节点里。表的数据按主键顺序物理（或逻辑）有序排列，<strong>主键索引就是数据本身</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">+--------------------------------------------------------------+</span><br><span class="line">|              Primary Key Index B+ Tree                       |</span><br><span class="line">|        (InnoDB Clustered Index / IOT)                        |</span><br><span class="line">+--------------------------------------------------------------+</span><br><span class="line">|  Non-leaf: [id=1,ptr] [id=5,ptr] ...                         |</span><br><span class="line">|                                                              |</span><br><span class="line">|  Leaf Nodes:                                                 |</span><br><span class="line">|  +------------------------------------------------------+    |</span><br><span class="line">|  | id=1 | name=Alice | age=30 | ...                     |    |</span><br><span class="line">|  | id=2 | name=Bob   | age=25 | ...                     |    |</span><br><span class="line">|  | id=3 | name=Carol | age=28 | ...                     |    |</span><br><span class="line">|  | id=4 | name=Dave  | age=35 | ...                     |    |</span><br><span class="line">|  | id=5 | name=Eve   | age=22 | ...                     |    |</span><br><span class="line">|  +------------------------------------------------------+    |</span><br><span class="line">+--------------------------------------------------------------+</span><br></pre></td></tr></table></figure>
+
+<p><strong>代表</strong>：MySQL InnoDB（始终）、Oracle（IOT 可选）、PostgreSQL（仅类似物化视图，非原生）</p>
+<hr>
+<h2 id="2-查询性能对比"><a href="#2-查询性能对比" class="headerlink" title="2. 查询性能对比"></a>2. 查询性能对比</h2><h3 id="2-1-主键精确查询"><a href="#2-1-主键精确查询" class="headerlink" title="2.1 主键精确查询"></a>2.1 主键精确查询</h3><table>
+<thead>
+<tr>
+<th>场景</th>
+<th>堆表（PG&#x2F;Oracle）</th>
+<th>IOT（MySQL InnoDB）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>步骤</strong></td>
+<td>查主键索引 → 拿到 TID&#x2F;ROWID → 再去堆页读整行</td>
+<td>查主键索引 → 叶子节点直接就是数据</td>
+</tr>
+<tr>
+<td><strong>IO 次数</strong></td>
+<td>至少 2 次（索引页 + 数据页）</td>
+<td>通常 1~2 次（索引树高度）</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td></td>
+<td>✅ <strong>IOT 更优</strong></td>
+</tr>
+</tbody></table>
+<p>堆表多了一次”回表”（Heap Fetch），这是堆表绕不开的代价。</p>
+<h3 id="2-2-二级索引查询"><a href="#2-2-二级索引查询" class="headerlink" title="2.2 二级索引查询"></a>2.2 二级索引查询</h3><p>这是两者差异最显著的地方。</p>
+<p><strong>堆表的二级索引：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Secondary Index (idx_name)</span><br><span class="line">+--------+----------------+</span><br><span class="line">|  name  |   TID/ROWID    |</span><br><span class="line">+--------+----------------+</span><br><span class="line">| Alice  | (page_2,slot_1)|</span><br><span class="line">| Bob    | (page_2,slot_2)|</span><br><span class="line">| Carol  | (page_1,slot_1)|</span><br><span class="line">+--------+----------------+</span><br></pre></td></tr></table></figure>
+
+<p><strong>IOT 的二级索引（InnoDB 称为 Secondary Index）：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">Secondary Index (idx_name)</span><br><span class="line">+--------+----------------+</span><br><span class="line">|  name  |    PK Value    |</span><br><span class="line">+--------+----------------+</span><br><span class="line">| Alice  |       1        |</span><br><span class="line">| Bob    |       2        |</span><br><span class="line">| Carol  |       3        |</span><br><span class="line">+--------+----------------+</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>堆表（PG&#x2F;Oracle）</th>
+<th>IOT（MySQL InnoDB）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>回表方式</strong></td>
+<td>用物理地址直接定位堆页</td>
+<td>用主键值去主键索引再查一次（回表）</td>
+</tr>
+<tr>
+<td><strong>索引大小</strong></td>
+<td>较小（物理地址通常 4~6 字节）</td>
+<td>较大（主键值可能很长，如 UUID 36 字节）</td>
+</tr>
+<tr>
+<td><strong>物理地址变了的处理</strong></td>
+<td>必须更新所有索引（HOT 优化可缓解）</td>
+<td>不受影响，二级索引存的是逻辑主键</td>
+</tr>
+<tr>
+<td><strong>覆盖索引效果</strong></td>
+<td>更好（索引小，更容易全放内存）</td>
+<td>稍差（索引大，但主键查询省一次 IO）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>PostgreSQL 的 HOT（Heap-Only Tuple）</strong>：更新非索引列时，PG 可以在同一页内创建新版本行，不更新任何索引。这是堆表对抗索引更新开销的利器。</p>
+</blockquote>
+<h3 id="2-3-范围查询"><a href="#2-3-范围查询" class="headerlink" title="2.3 范围查询"></a>2.3 范围查询</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="keyword">BETWEEN</span> <span class="number">1000</span> <span class="keyword">AND</span> <span class="number">2000</span>;</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>数据局部性</strong></td>
+<td>差。id 相邻的行可能散落在不同页</td>
+<td>✅ <strong>极好</strong>。id 相邻的行物理相邻，顺序 IO</td>
+</tr>
+<tr>
+<td><strong>缓存友好性</strong></td>
+<td>预读困难，随机 IO 多</td>
+<td>顺序扫描，预读命中率高</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td></td>
+<td>✅ <strong>IOT 大胜</strong></td>
+</tr>
+</tbody></table>
+<p>这也是 OLAP 场景下，MySQL 主键范围查询通常比 PG 更友好的原因。当然，PG 可以通过**聚簇（CLUSTER）**命令临时重排堆表，但这是离线操作且需要维护。</p>
+<h3 id="2-4-全表扫描"><a href="#2-4-全表扫描" class="headerlink" title="2.4 全表扫描"></a>2.4 全表扫描</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> age <span class="operator">&gt;</span> <span class="number">80</span>;  <span class="comment">-- 无索引，被迫全表扫</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>数据读取</strong></td>
+<td>按物理页顺序读，连续 IO</td>
+<td>按主键顺序读，逻辑上可能跳跃（页分裂后）</td>
+</tr>
+<tr>
+<td><strong>空间密度</strong></td>
+<td>可能有碎片，但通常较紧凑</td>
+<td>主键顺序导致页分裂，可能有空洞</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td>✅ <strong>堆表略优</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<p>堆表的全表扫描通常是更纯粹地顺序读磁盘页。IOT 因为 B+ 树的结构，叶子节点可能不连续，顺序性稍差。</p>
+<hr>
+<h2 id="3-写入性能对比"><a href="#3-写入性能对比" class="headerlink" title="3. 写入性能对比"></a>3. 写入性能对比</h2><h3 id="3-1-插入新行"><a href="#3-1-插入新行" class="headerlink" title="3.1 插入新行"></a>3.1 插入新行</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>插入位置</strong></td>
+<td>随便找个有空位的页塞进去</td>
+<td>必须按主键顺序插入到正确位置</td>
+</tr>
+<tr>
+<td><strong>页分裂</strong></td>
+<td>仅当页满时分裂当前页</td>
+<td>插入中间位置可能触发页分裂和级联调整</td>
+</tr>
+<tr>
+<td><strong>主键选择影响</strong></td>
+<td>几乎没有</td>
+<td>极大。自增主键顺序插入最快，UUID 随机主键是灾难</td>
+</tr>
+<tr>
+<td><strong>并发插入</strong></td>
+<td>多个事务可并发向不同页插入</td>
+<td>自增主键可能导致”尾部热点”竞争</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td>✅ <strong>堆表更灵活</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>MySQL 的隐式主键</strong>：如果你建表时不指定主键，InnoDB 会自动生成一个 6 字节的隐藏主键（row_id），这同样是一个 IOT。</p>
+</blockquote>
+<h3 id="3-2-更新操作"><a href="#3-2-更新操作" class="headerlink" title="3.2 更新操作"></a>3.2 更新操作</h3><p><strong>更新非索引列：</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>行迁移</strong></td>
+<td>原地更新或同页内新位置（HOT）</td>
+<td>原地更新，数据量在页内变化大时可能触发页分裂</td>
+</tr>
+<tr>
+<td><strong>索引维护</strong></td>
+<td>HOT 优化下无需更新任何索引</td>
+<td>只需更新涉及的二级索引</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td>✅ <strong>堆表 + HOT 很高效</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<p><strong>更新主键：</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>物理移动</strong></td>
+<td>行不动，只改主键索引里的指针</td>
+<td>❌ <strong>数据行必须在 B+ 树中物理移动位置</strong></td>
+</tr>
+<tr>
+<td><strong>代价</strong></td>
+<td>低</td>
+<td>高：删除旧位置 + 插入新位置 + 更新所有二级索引</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td>✅ <strong>堆表完胜</strong></td>
+<td></td>
+</tr>
+</tbody></table>
+<p>这也是为什么 MySQL 中更新主键是大忌，而 PG&#x2F;Oracle 中改主键相对轻松。</p>
+<p><strong>更新二级索引列：</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>需要更新</strong></td>
+<td>该二级索引 + 可能的其他二级索引</td>
+<td>该二级索引 + 可能的其他二级索引</td>
+</tr>
+<tr>
+<td><strong>额外代价</strong></td>
+<td>如果行被迫迁出本页，所有索引都要更新</td>
+<td>无额外代价（因为二级索引存的是主键，不受物理位置影响）</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td>各有优劣</td>
+<td></td>
+</tr>
+</tbody></table>
+<h3 id="3-3-删除"><a href="#3-3-删除" class="headerlink" title="3.3 删除"></a>3.3 删除</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>PG</strong></td>
+<td>标记删除（MVCC 版本链），VACUUM 异步清理</td>
+<td>标记删除，purge 线程异步清理</td>
+</tr>
+<tr>
+<td><strong>Oracle</strong></td>
+<td>标记删除，后台进程清理或插入时重用</td>
+<td>类似</td>
+</tr>
+<tr>
+<td><strong>空间回收</strong></td>
+<td>需要专门维护（VACUUM &#x2F; 段收缩）</td>
+<td>页内合并&#x2F;分裂自然调整</td>
+</tr>
+<tr>
+<td>** winner**</td>
+<td>各有优劣</td>
+<td></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="4-空间与碎片"><a href="#4-空间与碎片" class="headerlink" title="4. 空间与碎片"></a>4. 空间与碎片</h2><h3 id="4-1-空间利用率"><a href="#4-1-空间利用率" class="headerlink" title="4.1 空间利用率"></a>4.1 空间利用率</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>页填充率</strong></td>
+<td>通常较高（插入随意填充）</td>
+<td>顺序插入时很高；随机插入时页分裂频繁，可能有 50% 填充率</td>
+</tr>
+<tr>
+<td><strong>碎片来源</strong></td>
+<td>更新&#x2F;删除后留下的空洞</td>
+<td>页分裂导致的半满页</td>
+</tr>
+<tr>
+<td><strong>整理方式</strong></td>
+<td><code>VACUUM FULL</code>、<code>ALTER TABLE ... SHRINK SPACE</code></td>
+<td><code>OPTIMIZE TABLE</code>（重建表）</td>
+</tr>
+</tbody></table>
+<h3 id="4-2-表与索引的关系"><a href="#4-2-表与索引的关系" class="headerlink" title="4.2 表与索引的关系"></a>4.2 表与索引的关系</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>数据存储</strong></td>
+<td>表（堆）是独立的，索引是附加结构</td>
+<td>数据存储在主键索引里，表不能脱离主键存在</td>
+</tr>
+<tr>
+<td><strong>主键是否必须</strong></td>
+<td>不必须（但强烈建议有）</td>
+<td>必须（显式或隐式）</td>
+</tr>
+<tr>
+<td><strong>无主键的表</strong></td>
+<td>完全正常，堆上直接操作</td>
+<td>InnoDB 自动生成 6 字节隐藏主键</td>
+</tr>
+<tr>
+<td><strong>索引数量影响</strong></td>
+<td>每多一个索引，更新代价线性增加</td>
+<td>同样增加，但二级索引通常更大</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="5-一些具体场景"><a href="#5-一些具体场景" class="headerlink" title="5. 一些具体场景"></a>5. 一些具体场景</h2><h3 id="5-1-覆盖索引（Covering-Index）"><a href="#5-1-覆盖索引（Covering-Index）" class="headerlink" title="5.1 覆盖索引（Covering Index）"></a>5.1 覆盖索引（Covering Index）</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> name, age <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> name <span class="operator">=</span> <span class="string">&#x27;Alice&#x27;</span>;</span><br><span class="line"><span class="comment">-- 假设有索引 idx_name(name, age)</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>是否需要回表</strong></td>
+<td>如果索引包含所有查询列，则不需要</td>
+<td>如果二级索引包含所有查询列，则不需要</td>
+</tr>
+<tr>
+<td><strong>索引大小</strong></td>
+<td>较小，更容易实现纯内存覆盖索引</td>
+<td>较大，但如果查询列少也能覆盖</td>
+</tr>
+<tr>
+<td><strong>实际表现</strong></td>
+<td>PG 的 Index-Only Scan 非常高效</td>
+<td>InnoDB 的 Covering Index 也很高效</td>
+</tr>
+</tbody></table>
+<h3 id="5-2-没有主键的查询表-日志表"><a href="#5-2-没有主键的查询表-日志表" class="headerlink" title="5.2 没有主键的查询表 &#x2F; 日志表"></a>5.2 没有主键的查询表 &#x2F; 日志表</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>适用性</strong></td>
+<td>✅ <strong>非常适合</strong>。直接堆插，无额外维护</td>
+<td>必须造一个隐藏主键，无端增加开销</td>
+</tr>
+<tr>
+<td><strong>顺序写入</strong></td>
+<td>日志顺序追加，性能极好</td>
+<td>自增主键也能顺序写，但多了一层 B+ 树维护</td>
+</tr>
+<tr>
+<td><strong>典型场景</strong></td>
+<td>PG 的日志表、临时表、大字段表</td>
+<td>MySQL 也常用，但不如堆表自然</td>
+</tr>
+</tbody></table>
+<h3 id="5-3-主键高频范围扫描的-OLTP"><a href="#5-3-主键高频范围扫描的-OLTP" class="headerlink" title="5.3 主键高频范围扫描的 OLTP"></a>5.3 主键高频范围扫描的 OLTP</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>堆表</th>
+<th>IOT</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>订单表按 user_id 查近期记录</strong></td>
+<td>索引查到一堆 TID，回表随机 IO</td>
+<td>✅ <strong>主键索引直接顺序读，性能极佳</strong></td>
+</tr>
+<tr>
+<td><strong>典型系统</strong></td>
+<td>需要额外优化（如 pg_cluster）</td>
+<td>MySQL 天生擅长此类查询</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="6-能不能换一条路？"><a href="#6-能不能换一条路？" class="headerlink" title="6. 能不能换一条路？"></a>6. 能不能换一条路？</h2><h3 id="6-1-Oracle：两者皆可"><a href="#6-1-Oracle：两者皆可" class="headerlink" title="6.1 Oracle：两者皆可"></a>6.1 Oracle：两者皆可</h3><p>Oracle 提供了真正的 IOT 语法：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 堆表（默认）</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> heap_t (id <span class="keyword">PRIMARY KEY</span>, name) TABLESPACE users;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- IOT</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> iot_t (id <span class="keyword">PRIMARY KEY</span>, name)</span><br><span class="line">ORGANIZATION INDEX;</span><br></pre></td></tr></table></figure>
+
+<p>Oracle 用户可以根据访问模式自由选择，这是灵活性最高的方案。</p>
+<h3 id="6-2-PostgreSQL：原生只有堆表"><a href="#6-2-PostgreSQL：原生只有堆表" class="headerlink" title="6.2 PostgreSQL：原生只有堆表"></a>6.2 PostgreSQL：原生只有堆表</h3><p>PG 没有原生 IOT，但有几个 workaround：</p>
+<ul>
+<li><p><strong><code>CLUSTER</code> 命令</strong>：按某个索引顺序离线重排堆表。表变为逻辑有序，但仍是堆结构，且后续插入会打乱顺序。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CLUSTER users <span class="keyword">USING</span> users_pkey;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>覆盖索引 + Index-Only Scan</strong>：用多级索引模拟 IOT 的查询效率。</p>
+</li>
+<li><p><strong>表继承 + 分区</strong>：按范围分区可以让数据在分区键上保持局部有序。</p>
+</li>
+</ul>
+<h3 id="6-3-MySQL：原生只有-IOT"><a href="#6-3-MySQL：原生只有-IOT" class="headerlink" title="6.3 MySQL：原生只有 IOT"></a>6.3 MySQL：原生只有 IOT</h3><p>InnoDB 不支持堆表。如果你确实需要堆表语义：</p>
+<ul>
+<li>用自增主键模拟顺序插入，避免随机主键的碎片</li>
+<li>用 <code>ROW_FORMAT=COMPRESSED</code> 或 <code>DYNAMIC</code> 优化空间</li>
+<li>考虑 MyISAM（不推荐，不支持事务），或者 MariaDB 的 Aria 引擎</li>
+</ul>
+<hr>
+<h2 id="7-总结"><a href="#7-总结" class="headerlink" title="7. 总结"></a>7. 总结</h2><table>
+<thead>
+<tr>
+<th>对比维度</th>
+<th>堆表（PG &#x2F; Oracle）</th>
+<th>IOT（MySQL InnoDB）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>数据组织</strong></td>
+<td>无序堆页集合</td>
+<td>主键 B+ 树叶子节点即数据</td>
+</tr>
+<tr>
+<td><strong>主键查询</strong></td>
+<td>索引 + 回表（2 次 IO）</td>
+<td>索引即数据（1~2 次 IO） ✅</td>
+</tr>
+<tr>
+<td><strong>二级索引</strong></td>
+<td>存物理地址，小而快</td>
+<td>存主键值，大但不受物理位置影响</td>
+</tr>
+<tr>
+<td><strong>范围查询</strong></td>
+<td>回表随机 IO</td>
+<td>顺序 IO，缓存友好 ✅</td>
+</tr>
+<tr>
+<td><strong>插入性能</strong></td>
+<td>快，任意位置插入</td>
+<td>依赖主键选择，随机主键性能差</td>
+</tr>
+<tr>
+<td><strong>更新主键</strong></td>
+<td>轻量</td>
+<td>昂贵（物理移动行）</td>
+</tr>
+<tr>
+<td><strong>更新非索引列</strong></td>
+<td>HOT 优化下极高效 ✅</td>
+<td>正常</td>
+</tr>
+<tr>
+<td><strong>全表扫描</strong></td>
+<td>顺序读，略优 ✅</td>
+<td>B+ 树叶子遍历</td>
+</tr>
+<tr>
+<td><strong>碎片问题</strong></td>
+<td>堆页空洞</td>
+<td>页分裂导致的半满页</td>
+</tr>
+<tr>
+<td><strong>无主键表</strong></td>
+<td>完全支持 ✅</td>
+<td>自动生成隐藏主键</td>
+</tr>
+<tr>
+<td><strong>空间密度</strong></td>
+<td>通常较高</td>
+<td>顺序插入高，随机插入低</td>
+</tr>
+</tbody></table>
+<h3 id="一句话概括"><a href="#一句话概括" class="headerlink" title="一句话概括"></a>一句话概括</h3><ul>
+<li><strong>堆表</strong>把数据和索引彻底解耦：表是表，索引是索引。插入自由、更新灵活，但查主键和范围查询要多一次回表。</li>
+<li><strong>IOT</strong>把数据和主键焊在一起：主键即表。主键查询和范围查询飞快，但插入受主键顺序约束，更新主键代价高昂。</li>
+</ul>
+<p>这也解释了为什么 MySQL 社区反复强调”主键设计很重要”，而 PostgreSQL 社区对主键的态度相对宽松——<strong>底层存储结构决定了上层的使用哲学</strong>。</p>
+<hr>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/storage.html">PostgreSQL Documentation: Chapter 61. Database Physical Storage</a></li>
+<li><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/innodb-row-format.html">MySQL 8.0 Reference Manual: InnoDB Row Formats</a></li>
+<li><a target="_blank" rel="noopener" href="https://docs.oracle.com/en/database/oracle/oracle-database/19/cncpt/index-organized-tables.html">Oracle Database Concepts: Index-Organized Tables</a></li>
+<li><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html">The InnoDB Storage Engine &#x2F; Clustered and Secondary Indexes</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.postgresql.org/docs/current/storage-hot.html">PostgreSQL HOT</a></li>
+</ul>
+
+  </div>
+</article>
+
+
+
+    <div class="blog-post-comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="Aqiu16717/Aqiu16717.github.io"
+            data-repo-id="R_kgDOHKvpgw"
+            data-category="Announcements"
+            data-category-id="DIC_kwDOHKvpg84C1uo1"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="preferred_color_scheme"
+
+            
+            
+            
+            data-lang="zh-CN"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="toc-number">1.</span> <span class="toc-text">1. 核心概念</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1-%E5%A0%86%E8%A1%A8%EF%BC%88Heap-Table%EF%BC%89"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 堆表（Heap Table）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2-IOT-%E8%81%9A%E7%B0%87%E7%B4%A2%E5%BC%95%E8%A1%A8"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 IOT &#x2F; 聚簇索引表</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E6%9F%A5%E8%AF%A2%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-number">2.</span> <span class="toc-text">2. 查询性能对比</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E4%B8%BB%E9%94%AE%E7%B2%BE%E7%A1%AE%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 主键精确查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E4%BA%8C%E7%BA%A7%E7%B4%A2%E5%BC%95%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 二级索引查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E8%8C%83%E5%9B%B4%E6%9F%A5%E8%AF%A2"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 范围查询</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-%E5%85%A8%E8%A1%A8%E6%89%AB%E6%8F%8F"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 全表扫描</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%86%99%E5%85%A5%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94"><span class="toc-number">3.</span> <span class="toc-text">3. 写入性能对比</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E6%8F%92%E5%85%A5%E6%96%B0%E8%A1%8C"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 插入新行</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E6%9B%B4%E6%96%B0%E6%93%8D%E4%BD%9C"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 更新操作</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E5%88%A0%E9%99%A4"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 删除</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E7%A9%BA%E9%97%B4%E4%B8%8E%E7%A2%8E%E7%89%87"><span class="toc-number">4.</span> <span class="toc-text">4. 空间与碎片</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E7%A9%BA%E9%97%B4%E5%88%A9%E7%94%A8%E7%8E%87"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 空间利用率</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E8%A1%A8%E4%B8%8E%E7%B4%A2%E5%BC%95%E7%9A%84%E5%85%B3%E7%B3%BB"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 表与索引的关系</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%80%E4%BA%9B%E5%85%B7%E4%BD%93%E5%9C%BA%E6%99%AF"><span class="toc-number">5.</span> <span class="toc-text">5. 一些具体场景</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E8%A6%86%E7%9B%96%E7%B4%A2%E5%BC%95%EF%BC%88Covering-Index%EF%BC%89"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 覆盖索引（Covering Index）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E6%B2%A1%E6%9C%89%E4%B8%BB%E9%94%AE%E7%9A%84%E6%9F%A5%E8%AF%A2%E8%A1%A8-%E6%97%A5%E5%BF%97%E8%A1%A8"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 没有主键的查询表 &#x2F; 日志表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-%E4%B8%BB%E9%94%AE%E9%AB%98%E9%A2%91%E8%8C%83%E5%9B%B4%E6%89%AB%E6%8F%8F%E7%9A%84-OLTP"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 主键高频范围扫描的 OLTP</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E8%83%BD%E4%B8%8D%E8%83%BD%E6%8D%A2%E4%B8%80%E6%9D%A1%E8%B7%AF%EF%BC%9F"><span class="toc-number">6.</span> <span class="toc-text">6. 能不能换一条路？</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-Oracle%EF%BC%9A%E4%B8%A4%E8%80%85%E7%9A%86%E5%8F%AF"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 Oracle：两者皆可</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-PostgreSQL%EF%BC%9A%E5%8E%9F%E7%94%9F%E5%8F%AA%E6%9C%89%E5%A0%86%E8%A1%A8"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 PostgreSQL：原生只有堆表</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-MySQL%EF%BC%9A%E5%8E%9F%E7%94%9F%E5%8F%AA%E6%9C%89-IOT"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 MySQL：原生只有 IOT</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E6%80%BB%E7%BB%93"><span class="toc-number">7.</span> <span class="toc-text">7. 总结</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E5%8F%A5%E8%AF%9D%E6%A6%82%E6%8B%AC"><span class="toc-number">7.1.</span> <span class="toc-text">一句话概括</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">8.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&text=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&is_video=false&description=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学&body=Check out this article: https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&title=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&name=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学&description=&lt;p&gt;关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用&lt;strong&gt;堆表（Heap Table）&lt;/strong&gt;，而 MySQL InnoDB 默认用&lt;strong&gt;索引组织表（IOT，Index-Organized Table）&lt;/strong&gt;。两种设计没有绝对的优劣，只有不同的取舍。&lt;/p&gt;"><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/&t=堆表 vs IOT：PG/Oracle 与 MySQL 的存储哲学"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <!-- 语言切换 -->
+        
+        <a id="lang-switch-mobile" class="icon" href="/en/2026/05/08/heap-table-vs-iot-en/">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> EN
+        </a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-center">
+    Copyright &copy;
+    
+    
+    2024-2026
+    aq1u
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+ 
+  <link
+    rel="preload"
+    href="/lib/font-awesome/css/all.min.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="/lib/font-awesome/css/all.min.css"
+  /></noscript>
+
+
+    <!-- jquery -->
+
+  
+<script src="/lib/jquery/jquery.min.js"></script>
+
+
+
+
+
+<!-- clipboard -->
+
+  
+    
+<script src="/lib/clipboard/clipboard.min.js"></script>
+
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>

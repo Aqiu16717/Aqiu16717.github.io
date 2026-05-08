@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+
+<html lang="zh">
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上。理解这一点，是搞懂 InnoDB 并发行为的前提。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="InnoDB 行锁详解">
+<meta property="og:url" content="https://aqiu16717.github.io/2026/05/08/innodb-row-lock/index.html">
+<meta property="og:site_name" content="aq1u&#39;s blog">
+<meta property="og:description" content="InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上。理解这一点，是搞懂 InnoDB 并发行为的前提。">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-08T10:00:00.000Z">
+<meta property="article:modified_time" content="2026-05-08T13:26:48.923Z">
+<meta property="article:author" content="aq1u">
+<meta property="article:tag" content="InnoDB">
+<meta property="article:tag" content="MySQL">
+<meta property="article:tag" content="事务">
+<meta property="article:tag" content="数据库">
+<meta property="article:tag" content="行锁">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/assets/favicon.ico">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/assets/favicon-192x192.png" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/assets/apple-touch-icon.png">
+        
+      
+    
+    <!-- title -->
+    <title>InnoDB 行锁详解</title>
+    <!-- async scripts -->
+    <!-- Google Analytics -->
+
+
+    <!-- Umami Analytics -->
+
+
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+      <link rel="alternate" href="/atom.xml" title="aq1u&#39;s blog" type="application/atom+xml" />
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 8.0.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="目录"><i class="fa-solid fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="顶部" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fa-solid fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">首页</a></li><!--
+     --><!--
+       --><li><a href="/about/">关于</a></li><!--
+     --><!--
+       --><li><a href="/archives/">归档</a></li><!--
+     --><!--
+       --><li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li><!--
+     -->
+        <!-- 语言切换 -->
+        
+        <li class="lang-switch">
+          <a href="#" id="lang-toggle" title="切换语言">
+            <i class="fa-solid fa-globe"></i>
+            <span class="lang-code">中</span>
+          </a>
+          <ul class="lang-dropdown">
+            <li><a href="/2026/05/08/innodb-row-lock/" class="active">中文</a></li>
+            <li><a href="/en/2026/05/08/innodb-row-lock-en/" class="">English</a></li>
+          </ul>
+        </li>
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="下一篇" href="/2026/05/08/update-primary-key-mysql-vs-pg/"><i class="fa-solid fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="返回顶部" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="分享文章" href="#"><i class="fa-solid fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">上一篇</span>
+      <span id="i-next" class="info" style="display:none;">下一篇</span>
+      <span id="i-top" class="info" style="display:none;">返回顶部</span>
+      <span id="i-share" class="info" style="display:none;">分享文章</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&text=InnoDB 行锁详解"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&is_video=false&description=InnoDB 行锁详解"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=InnoDB 行锁详解&body=Check out this article: https://aqiu16717.github.io/2026/05/08/innodb-row-lock/"><i class="fa-solid fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&name=InnoDB 行锁详解&description=&lt;p&gt;InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：&lt;strong&gt;行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上&lt;/strong&gt;。理解这一点，是搞懂 InnoDB 并发行为的前提。&lt;/p&gt;"><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&t=InnoDB 行锁详解"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    
+    
+      <div id="toc">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E8%A1%8C%E9%94%81%E9%94%81%E7%9A%84%E6%98%AF%E7%B4%A2%E5%BC%95%EF%BC%8C%E4%B8%8D%E6%98%AF%E6%95%B0%E6%8D%AE"><span class="toc-number">1.</span> <span class="toc-text">1. 行锁锁的是索引，不是数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%B8%A4%E7%A7%8D%E5%9F%BA%E6%9C%AC%E8%A1%8C%E9%94%81%EF%BC%9AS-%E4%B8%8E-X"><span class="toc-number">2.</span> <span class="toc-text">2. 两种基本行锁：S 与 X</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E8%A1%8C%E9%94%81%E7%9A%84%E4%B8%89%E7%A7%8D%E7%AE%97%E6%B3%95"><span class="toc-number">3.</span> <span class="toc-text">3. 行锁的三种算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-Record-Lock%EF%BC%88%E8%AE%B0%E5%BD%95%E9%94%81%EF%BC%89"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 Record Lock（记录锁）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-Gap-Lock%EF%BC%88%E9%97%B4%E9%9A%99%E9%94%81%EF%BC%89"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 Gap Lock（间隙锁）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-Next-Key-Lock%EF%BC%88%E4%B8%B4%E9%94%AE%E9%94%81%EF%BC%89"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 Next-Key Lock（临键锁）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E6%84%8F%E5%90%91%E9%94%81%EF%BC%9AIS-%E4%B8%8E-IX"><span class="toc-number">4.</span> <span class="toc-text">4. 意向锁：IS 与 IX</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E6%8F%92%E5%85%A5%E6%84%8F%E5%90%91%E9%94%81%EF%BC%88Insert-Intention-Gap-Lock%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">5. 插入意向锁（Insert Intention Gap Lock）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-MVCC-%E4%B8%8E%E8%A1%8C%E9%94%81%EF%BC%9A%E8%AF%BB%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E9%98%BB%E5%A1%9E%E8%AF%BB%EF%BC%9F"><span class="toc-number">6.</span> <span class="toc-text">6. MVCC 与行锁：读为什么不阻塞读？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E4%B8%80%E4%B8%AA%E6%AD%BB%E9%94%81%E6%A1%88%E4%BE%8B"><span class="toc-number">7.</span> <span class="toc-text">7. 一个死锁案例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E8%BF%99%E7%B1%BB%E6%AD%BB%E9%94%81"><span class="toc-number">7.1.</span> <span class="toc-text">如何避免这类死锁</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E6%9F%A5%E7%9C%8B%E5%92%8C%E6%8E%92%E6%9F%A5%E9%94%81"><span class="toc-number">8.</span> <span class="toc-text">8. 查看和排查锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E5%BD%93%E5%89%8D%E9%94%81%E4%BF%A1%E6%81%AF"><span class="toc-number">8.1.</span> <span class="toc-text">8.1 当前锁信息</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E5%85%B3%E9%94%AE%E5%AD%97%E6%AE%B5%E8%A7%A3%E8%AF%BB"><span class="toc-number">8.2.</span> <span class="toc-text">8.2 关键字段解读</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E5%B8%B8%E8%A7%81-lock-mode-%E5%90%AB%E4%B9%89"><span class="toc-number">8.3.</span> <span class="toc-text">8.3 常见 lock_mode 含义</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E5%8F%82%E6%95%B0%E8%B0%83%E4%BC%98"><span class="toc-number">9.</span> <span class="toc-text">9. 参数调优</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E6%80%BB%E7%BB%93"><span class="toc-number">10.</span> <span class="toc-text">10. 总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">11.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+  </span>
+</div>
+
+    
+    <div class="content index py4 ">
+        
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle p-name" itemprop="name headline">
+        InnoDB 行锁详解
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author p-author h-card" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span class="p-name" itemprop="name">aq1u</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2026-05-08T10:00:00.000Z" class="dt-published" itemprop="datePublished">2026-05-08</time>
+        
+        (Updated: <time datetime="2026-05-08T13:26:48.923Z" class="dt-updated" itemprop="dateModified">2026-05-08</time>)
+        
+      
+    </div>
+
+
+      
+    <div class="article-category">
+        <i class="fa-solid fa-archive"></i>
+        <a class="category-link" href="/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/">数据库</a>
+    </div>
+
+
+      
+    <div class="article-tag">
+        <i class="fa-solid fa-tag"></i>
+        <a class="p-category" href="/tags/InnoDB/" rel="tag">InnoDB</a>, <a class="p-category" href="/tags/MySQL/" rel="tag">MySQL</a>, <a class="p-category" href="/tags/%E4%BA%8B%E5%8A%A1/" rel="tag">事务</a>, <a class="p-category" href="/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/" rel="tag">数据库</a>, <a class="p-category" href="/tags/%E8%A1%8C%E9%94%81/" rel="tag">行锁</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content e-content" itemprop="articleBody">
+    <p>InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：<strong>行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上</strong>。理解这一点，是搞懂 InnoDB 并发行为的前提。</p>
+<span id="more"></span>
+
+<h2 id="1-行锁锁的是索引，不是数据"><a href="#1-行锁锁的是索引，不是数据" class="headerlink" title="1. 行锁锁的是索引，不是数据"></a>1. 行锁锁的是索引，不是数据</h2><p>InnoDB 的数据通过聚簇索引组织，所有行数据都挂在主键索引的叶子节点上。因此：</p>
+<blockquote>
+<p><strong>InnoDB 的行锁，本质上是对索引记录加的锁。</strong></p>
+</blockquote>
+<p>即使你的 SQL 看起来在操作一行数据，InnoDB 也会先找到对应的索引记录，然后在<strong>索引</strong>上加锁。这也是为什么”查询没有走索引”时，行锁可能退化为表锁——没有索引记录可以锁，只能锁整个表。</p>
+<hr>
+<h2 id="2-两种基本行锁：S-与-X"><a href="#2-两种基本行锁：S-与-X" class="headerlink" title="2. 两种基本行锁：S 与 X"></a>2. 两种基本行锁：S 与 X</h2><table>
+<thead>
+<tr>
+<th>锁类型</th>
+<th>名称</th>
+<th>允许其他事务</th>
+<th>阻塞其他事务</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>S</strong></td>
+<td>Shared Lock（共享锁 &#x2F; 读锁）</td>
+<td>再获取 S 锁</td>
+<td>获取 X 锁</td>
+</tr>
+<tr>
+<td><strong>X</strong></td>
+<td>Exclusive Lock（排他锁 &#x2F; 写锁）</td>
+<td>无</td>
+<td>获取 S 或 X 锁</td>
+</tr>
+</tbody></table>
+<p>获取方式：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- S 锁：当前读中的 SELECT ... LOCK IN SHARE MODE</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span> LOCK <span class="keyword">IN</span> SHARE MODE;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- X 锁：UPDATE / DELETE / INSERT，或 SELECT ... FOR UPDATE</span></span><br><span class="line"><span class="keyword">UPDATE</span> users <span class="keyword">SET</span> age <span class="operator">=</span> <span class="number">30</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="3-行锁的三种算法"><a href="#3-行锁的三种算法" class="headerlink" title="3. 行锁的三种算法"></a>3. 行锁的三种算法</h2><p>InnoDB 并不只有”锁住这一行”这一种行为。根据隔离级别和场景，它会使用三种不同的锁定算法：</p>
+<h3 id="3-1-Record-Lock（记录锁）"><a href="#3-1-Record-Lock（记录锁）" class="headerlink" title="3.1 Record Lock（记录锁）"></a>3.1 Record Lock（记录锁）</h3><p>锁定<strong>索引中的单条记录本身</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">+----+-------+-----+</span><br><span class="line">| id | name  | age |</span><br><span class="line">+----+-------+-----+</span><br><span class="line">|  1 | Alice |  30 |  ← 锁住这条索引记录</span><br><span class="line">|  2 | Bob   |  25 |</span><br><span class="line">|  3 | Carol |  28 |</span><br><span class="line">+----+-------+-----+</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">UPDATE</span> users <span class="keyword">SET</span> age <span class="operator">=</span> <span class="number">31</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;  <span class="comment">-- 对 id=1 加 X Record Lock</span></span><br></pre></td></tr></table></figure>
+
+<p>Record Lock 只在<strong>唯一索引</strong>（主键或唯一二级索引）上做精确匹配时生效。</p>
+<h3 id="3-2-Gap-Lock（间隙锁）"><a href="#3-2-Gap-Lock（间隙锁）" class="headerlink" title="3.2 Gap Lock（间隙锁）"></a>3.2 Gap Lock（间隙锁）</h3><p>锁定<strong>两条索引记录之间的空隙</strong>，防止其他事务在这个间隙中插入新记录。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">索引 id 的排序：  1        2        3</span><br><span class="line">                 │        │        │</span><br><span class="line">                 ↓        ↓        ↓</span><br><span class="line">               (-∞,1]  (1,2]   (2,3]   (3,+∞)</span><br><span class="line">               </span><br><span class="line">-- 对 id=2 加 Gap Lock 时，锁住的是 (1,2) 或 (2,3) 之间的间隙</span><br></pre></td></tr></table></figure>
+
+<p>Gap Lock 的特点是：<strong>锁定的是一个范围，而不是具体的记录</strong>。因此：</p>
+<ul>
+<li>多个事务可以在同一个间隙上同时持有 Gap Lock（互相兼容）</li>
+<li>Gap Lock 只阻止<strong>插入</strong>，不阻止<strong>修改已有记录</strong></li>
+</ul>
+<h3 id="3-3-Next-Key-Lock（临键锁）"><a href="#3-3-Next-Key-Lock（临键锁）" class="headerlink" title="3.3 Next-Key Lock（临键锁）"></a>3.3 Next-Key Lock（临键锁）</h3><p><strong>Record Lock + Gap Lock 的组合</strong>。这是 InnoDB 在 <strong>REPEATABLE READ</strong> 隔离级别下的<strong>默认行锁算法</strong>。</p>
+<p>它锁定的是<strong>一条记录 + 这条记录之前的间隙</strong>（左开右闭区间）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">对 id=2 的 Next-Key Lock 锁定范围：(1, 2]</span><br><span class="line"></span><br><span class="line">即：id=1 到 id=2 之间的间隙 + id=2 这条记录本身</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- RR 隔离级别下</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="operator">&gt;=</span> <span class="number">2</span> <span class="keyword">AND</span> id <span class="operator">&lt;</span> <span class="number">4</span> <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 实际锁定的范围（假设表中只有 id=1,2,3,5）：</span></span><br><span class="line"><span class="comment">-- (1, 2]  +  (2, 3]  +  (3, 5]</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>算法</th>
+<th>锁定对象</th>
+<th>隔离级别</th>
+<th>场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Record Lock</td>
+<td>单条索引记录</td>
+<td>RC &#x2F; RR</td>
+<td>唯一索引精确匹配</td>
+</tr>
+<tr>
+<td>Gap Lock</td>
+<td>记录之间的间隙</td>
+<td>RR</td>
+<td>防止幻读</td>
+</tr>
+<tr>
+<td>Next-Key Lock</td>
+<td>记录 + 前间隙</td>
+<td>RR（默认）</td>
+<td>范围查询、非唯一索引</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>READ COMMITTED 下，Gap Lock 通常不生效</strong>，除非外键检查或唯一键冲突检测需要。</p>
+</blockquote>
+<hr>
+<h2 id="4-意向锁：IS-与-IX"><a href="#4-意向锁：IS-与-IX" class="headerlink" title="4. 意向锁：IS 与 IX"></a>4. 意向锁：IS 与 IX</h2><p>行锁是细粒度的，但 InnoDB 也支持表级锁（如 <code>LOCK TABLES</code>）。为了协调两者，InnoDB 引入了<strong>意向锁（Intention Lock）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>锁类型</th>
+<th>含义</th>
+<th>触发场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>IS</strong></td>
+<td>Intention Shared</td>
+<td>事务打算对表中某些行加 S 锁</td>
+</tr>
+<tr>
+<td><strong>IX</strong></td>
+<td>Intention Exclusive</td>
+<td>事务打算对表中某些行加 X 锁</td>
+</tr>
+</tbody></table>
+<p>IX&#x2F;IS 是<strong>表级锁</strong>，它们不会阻塞其他事务的行级操作，但会阻塞全表锁：</p>
+<table>
+<thead>
+<tr>
+<th>请求者 \ 持有者</th>
+<th>IS</th>
+<th>IX</th>
+<th>S（表锁）</th>
+<th>X（表锁）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IS</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>IX</td>
+<td>✅</td>
+<td>✅</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>S（表锁）</td>
+<td>✅</td>
+<td>❌</td>
+<td>✅</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>X（表锁）</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+</tbody></table>
+<p>规则很简单：<strong>全表锁（S&#x2F;X）与意向锁（IX&#x2F;IS）互斥时，全表锁必须等待行锁释放。</strong></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 事务 A</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> users <span class="keyword">SET</span> age <span class="operator">=</span> <span class="number">30</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;  <span class="comment">-- 自动获取表的 IX + 行的 X</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 B（并发）</span></span><br><span class="line">LOCK TABLES users WRITE;  <span class="comment">-- 获取表的 X 锁，被 IX 阻塞，等待...</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="5-插入意向锁（Insert-Intention-Gap-Lock）"><a href="#5-插入意向锁（Insert-Intention-Gap-Lock）" class="headerlink" title="5. 插入意向锁（Insert Intention Gap Lock）"></a>5. 插入意向锁（Insert Intention Gap Lock）</h2><p>插入操作比较特殊。<code>INSERT</code> 在真正插入前，会先对目标位置加一个<strong>插入意向锁（Insert Intention Lock）</strong>。</p>
+<p>这是一种特殊的 Gap Lock，表示”我打算在这个间隙插入数据”。它的关键特性：</p>
+<ul>
+<li><strong>多个不冲突的插入意向锁可以共存</strong>（如往不同位置插入）</li>
+<li><strong>插入意向锁与 Gap Lock 冲突</strong>（如果别的事务已锁住这个间隙，插入必须等待）</li>
+</ul>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 事务 A</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="keyword">BETWEEN</span> <span class="number">2</span> <span class="keyword">AND</span> <span class="number">5</span> <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;</span><br><span class="line"><span class="comment">-- 锁定了 (1,2], (2,3], (3,5] 三个 Next-Key Lock</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 B</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">INSERT INTO</span> users (id, name) <span class="keyword">VALUES</span> (<span class="number">4</span>, <span class="string">&#x27;Dave&#x27;</span>);</span><br><span class="line"><span class="comment">-- id=4 落在 (3,5] 间隙中，插入意向锁与 A 的 Gap Lock 冲突，阻塞等待</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="6-MVCC-与行锁：读为什么不阻塞读？"><a href="#6-MVCC-与行锁：读为什么不阻塞读？" class="headerlink" title="6. MVCC 与行锁：读为什么不阻塞读？"></a>6. MVCC 与行锁：读为什么不阻塞读？</h2><p>InnoDB 的默认读操作（普通 <code>SELECT</code>）<strong>不加任何行锁</strong>。它通过 MVCC 读取事务开始时的快照版本：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 事务 A</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> users <span class="keyword">SET</span> age <span class="operator">=</span> <span class="number">30</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;  <span class="comment">-- 对 id=1 加 X 锁</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 B（并发）</span></span><br><span class="line"><span class="keyword">SELECT</span> age <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;  <span class="comment">-- 不加锁，读快照，直接返回旧值</span></span><br></pre></td></tr></table></figure>
+
+<p>这种读称为<strong>一致性非锁定读（Consistent Nonlocking Read）</strong>。</p>
+<p>如果你需要读到最新提交的数据（或阻塞等待），就要用<strong>锁定读（Locking Read）</strong>：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span> <span class="keyword">FOR</span> <span class="keyword">UPDATE</span>;      <span class="comment">-- 加 X 锁</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> users <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span> LOCK <span class="keyword">IN</span> SHARE MODE;  <span class="comment">-- 加 S 锁</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>读类型</th>
+<th>SQL</th>
+<th>是否加锁</th>
+<th>读到什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>快照读</td>
+<td><code>SELECT</code></td>
+<td>不加锁</td>
+<td>事务快照中的版本</td>
+</tr>
+<tr>
+<td>当前读（X）</td>
+<td><code>SELECT ... FOR UPDATE</code></td>
+<td>加 X 锁</td>
+<td>最新已提交版本</td>
+</tr>
+<tr>
+<td>当前读（S）</td>
+<td><code>SELECT ... LOCK IN SHARE MODE</code></td>
+<td>加 S 锁</td>
+<td>最新已提交版本</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="7-一个死锁案例"><a href="#7-一个死锁案例" class="headerlink" title="7. 一个死锁案例"></a>7. 一个死锁案例</h2><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 表结构</span></span><br><span class="line"><span class="keyword">CREATE TABLE</span> accounts (id <span class="type">INT</span> <span class="keyword">PRIMARY KEY</span>, balance <span class="type">INT</span>);</span><br><span class="line"><span class="keyword">INSERT INTO</span> accounts <span class="keyword">VALUES</span> (<span class="number">1</span>, <span class="number">100</span>), (<span class="number">2</span>, <span class="number">200</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 A</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> accounts <span class="keyword">SET</span> balance <span class="operator">=</span> balance <span class="operator">-</span> <span class="number">10</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;  <span class="comment">-- 锁住 id=1</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 B</span></span><br><span class="line"><span class="keyword">BEGIN</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> accounts <span class="keyword">SET</span> balance <span class="operator">=</span> balance <span class="operator">-</span> <span class="number">10</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">2</span>;  <span class="comment">-- 锁住 id=2</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 A 继续</span></span><br><span class="line"><span class="keyword">UPDATE</span> accounts <span class="keyword">SET</span> balance <span class="operator">=</span> balance <span class="operator">+</span> <span class="number">10</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">2</span>;  <span class="comment">-- 等待 B 释放 id=2 ❌</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 事务 B 继续</span></span><br><span class="line"><span class="keyword">UPDATE</span> accounts <span class="keyword">SET</span> balance <span class="operator">=</span> balance <span class="operator">+</span> <span class="number">10</span> <span class="keyword">WHERE</span> id <span class="operator">=</span> <span class="number">1</span>;  <span class="comment">-- 等待 A 释放 id=1 ❌</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 死锁！InnoDB 会自动检测并回滚其中一个事务（通常是修改行数较少的那个）</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="如何避免这类死锁"><a href="#如何避免这类死锁" class="headerlink" title="如何避免这类死锁"></a>如何避免这类死锁</h3><ol>
+<li><strong>固定的访问顺序</strong>：所有事务都按 <code>id</code> 升序加锁</li>
+<li><strong>缩短事务长度</strong>：减少持有锁的时间窗口</li>
+<li><strong>批量操作时一次性获取所有需要的锁</strong>：而非逐行获取</li>
+</ol>
+<hr>
+<h2 id="8-查看和排查锁"><a href="#8-查看和排查锁" class="headerlink" title="8. 查看和排查锁"></a>8. 查看和排查锁</h2><h3 id="8-1-当前锁信息"><a href="#8-1-当前锁信息" class="headerlink" title="8.1 当前锁信息"></a>8.1 当前锁信息</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- MySQL 8.0</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> performance_schema.data_locks </span><br><span class="line"><span class="keyword">WHERE</span> OBJECT_NAME <span class="operator">=</span> <span class="string">&#x27;users&#x27;</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 锁等待关系</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> performance_schema.data_lock_waits;</span><br></pre></td></tr></table></figure>
+
+<h3 id="8-2-关键字段解读"><a href="#8-2-关键字段解读" class="headerlink" title="8.2 关键字段解读"></a>8.2 关键字段解读</h3><table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>LOCK_TYPE</code></td>
+<td>TABLE &#x2F; RECORD</td>
+</tr>
+<tr>
+<td><code>LOCK_MODE</code></td>
+<td>S, X, IS, IX, GAP, NEXT-KEY</td>
+</tr>
+<tr>
+<td><code>LOCK_STATUS</code></td>
+<td>GRANTED &#x2F; WAITING</td>
+</tr>
+<tr>
+<td><code>LOCK_DATA</code></td>
+<td>锁定的索引值</td>
+</tr>
+</tbody></table>
+<h3 id="8-3-常见-lock-mode-含义"><a href="#8-3-常见-lock-mode-含义" class="headerlink" title="8.3 常见 lock_mode 含义"></a>8.3 常见 lock_mode 含义</h3><table>
+<thead>
+<tr>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>X</code></td>
+<td>X Record Lock</td>
+</tr>
+<tr>
+<td><code>S</code></td>
+<td>S Record Lock</td>
+</tr>
+<tr>
+<td><code>X,GAP</code></td>
+<td>X Gap Lock</td>
+</tr>
+<tr>
+<td><code>S,GAP</code></td>
+<td>S Gap Lock</td>
+</tr>
+<tr>
+<td><code>X,REC_NOT_GAP</code></td>
+<td>纯 Record Lock（不含 Gap）</td>
+</tr>
+<tr>
+<td><code>S,REC_NOT_GAP</code></td>
+<td>纯 S Record Lock</td>
+</tr>
+<tr>
+<td><code>X,GAP,INSERT_INTENTION</code></td>
+<td>插入意向锁</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="9-参数调优"><a href="#9-参数调优" class="headerlink" title="9. 参数调优"></a>9. 参数调优</h2><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>innodb_lock_wait_timeout</code></td>
+<td>50 秒</td>
+<td>行锁等待超时时间，超时后报错</td>
+</tr>
+<tr>
+<td><code>innodb_deadlock_detect</code></td>
+<td>ON</td>
+<td>是否开启死锁检测。高并发写入场景（如秒杀）可关闭，靠超时回滚</td>
+</tr>
+<tr>
+<td><code>innodb_locks_unsafe_for_binlog</code></td>
+<td>OFF</td>
+<td>已废弃，用隔离级别控制 Gap Lock</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>注意</strong>：<code>innodb_deadlock_detect = OFF</code> 在高并发热点行更新场景（如库存扣减）能显著提升性能，代价是死锁时只能等 <code>innodb_lock_wait_timeout</code> 超时。</p>
+</blockquote>
+<hr>
+<h2 id="10-总结"><a href="#10-总结" class="headerlink" title="10. 总结"></a>10. 总结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>一句话解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>行锁锁索引</strong></td>
+<td>没有索引记录，就无处加锁，可能退化为表锁</td>
+</tr>
+<tr>
+<td><strong>Record Lock</strong></td>
+<td>锁住单条索引记录</td>
+</tr>
+<tr>
+<td><strong>Gap Lock</strong></td>
+<td>锁住记录之间的间隙，阻止插入</td>
+</tr>
+<tr>
+<td><strong>Next-Key Lock</strong></td>
+<td>记录 + 前间隙，RR 隔离级别的默认算法</td>
+</tr>
+<tr>
+<td><strong>意向锁</strong></td>
+<td>表级标记，协调行锁与表锁的关系</td>
+</tr>
+<tr>
+<td><strong>插入意向锁</strong></td>
+<td>插入前对间隙加的标记，与 Gap Lock 互斥</td>
+</tr>
+<tr>
+<td><strong>MVCC</strong></td>
+<td>普通 SELECT 不加锁，读历史快照</td>
+</tr>
+<tr>
+<td><strong>当前读</strong></td>
+<td><code>FOR UPDATE</code> &#x2F; <code>LOCK IN SHARE MODE</code>，加锁读最新值</td>
+</tr>
+</tbody></table>
+<p>InnoDB 的行锁设计精妙之处在于：<strong>用索引上的锁，同时解决了并发控制和幻读问题</strong>。Next-Key Lock 让 RR 隔离级别下不需要串行化，就能避免幻读——这是 InnoDB 区别于许多其他存储引擎的核心竞争力。</p>
+<hr>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/innodb-locking.html">MySQL 8.0 Reference Manual &#x2F; InnoDB Locking</a></li>
+<li><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/innodb-next-key-locking.html">MySQL 8.0 Reference Manual &#x2F; Phantom Rows</a></li>
+<li><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/performance-schema-data-locks-table.html">MySQL 8.0 &#x2F; data_locks Table</a></li>
+<li><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/dev/mysql-server/latest/classlock__rec__t.html">InnoDB 事务锁源码分析</a></li>
+</ul>
+
+  </div>
+</article>
+
+
+
+    <div class="blog-post-comments">
+        <script src="https://giscus.app/client.js"
+            data-repo="Aqiu16717/Aqiu16717.github.io"
+            data-repo-id="R_kgDOHKvpgw"
+            data-category="Announcements"
+            data-category-id="DIC_kwDOHKvpg84C1uo1"
+            data-mapping="pathname"
+            data-strict="0"
+            data-reactions-enabled="1"
+            data-emit-metadata="0"
+            data-input-position="bottom"
+            data-theme="preferred_color_scheme"
+
+            
+            
+            
+            data-lang="zh-CN"
+            crossorigin="anonymous"
+            async>
+        </script>
+    </div>
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+        
+          <li><a href="/">首页</a></li>
+        
+          <li><a href="/about/">关于</a></li>
+        
+          <li><a href="/archives/">归档</a></li>
+        
+          <li><a target="_blank" rel="noopener" href="https://github.com/Aqiu16717">项目</a></li>
+        
+      </ul>
+    </div>
+
+    
+    
+      <div id="toc-footer" style="display: none">
+        <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E8%A1%8C%E9%94%81%E9%94%81%E7%9A%84%E6%98%AF%E7%B4%A2%E5%BC%95%EF%BC%8C%E4%B8%8D%E6%98%AF%E6%95%B0%E6%8D%AE"><span class="toc-number">1.</span> <span class="toc-text">1. 行锁锁的是索引，不是数据</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-%E4%B8%A4%E7%A7%8D%E5%9F%BA%E6%9C%AC%E8%A1%8C%E9%94%81%EF%BC%9AS-%E4%B8%8E-X"><span class="toc-number">2.</span> <span class="toc-text">2. 两种基本行锁：S 与 X</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E8%A1%8C%E9%94%81%E7%9A%84%E4%B8%89%E7%A7%8D%E7%AE%97%E6%B3%95"><span class="toc-number">3.</span> <span class="toc-text">3. 行锁的三种算法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-Record-Lock%EF%BC%88%E8%AE%B0%E5%BD%95%E9%94%81%EF%BC%89"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 Record Lock（记录锁）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-Gap-Lock%EF%BC%88%E9%97%B4%E9%9A%99%E9%94%81%EF%BC%89"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 Gap Lock（间隙锁）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-Next-Key-Lock%EF%BC%88%E4%B8%B4%E9%94%AE%E9%94%81%EF%BC%89"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 Next-Key Lock（临键锁）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E6%84%8F%E5%90%91%E9%94%81%EF%BC%9AIS-%E4%B8%8E-IX"><span class="toc-number">4.</span> <span class="toc-text">4. 意向锁：IS 与 IX</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E6%8F%92%E5%85%A5%E6%84%8F%E5%90%91%E9%94%81%EF%BC%88Insert-Intention-Gap-Lock%EF%BC%89"><span class="toc-number">5.</span> <span class="toc-text">5. 插入意向锁（Insert Intention Gap Lock）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-MVCC-%E4%B8%8E%E8%A1%8C%E9%94%81%EF%BC%9A%E8%AF%BB%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E9%98%BB%E5%A1%9E%E8%AF%BB%EF%BC%9F"><span class="toc-number">6.</span> <span class="toc-text">6. MVCC 与行锁：读为什么不阻塞读？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E4%B8%80%E4%B8%AA%E6%AD%BB%E9%94%81%E6%A1%88%E4%BE%8B"><span class="toc-number">7.</span> <span class="toc-text">7. 一个死锁案例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E9%81%BF%E5%85%8D%E8%BF%99%E7%B1%BB%E6%AD%BB%E9%94%81"><span class="toc-number">7.1.</span> <span class="toc-text">如何避免这类死锁</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E6%9F%A5%E7%9C%8B%E5%92%8C%E6%8E%92%E6%9F%A5%E9%94%81"><span class="toc-number">8.</span> <span class="toc-text">8. 查看和排查锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E5%BD%93%E5%89%8D%E9%94%81%E4%BF%A1%E6%81%AF"><span class="toc-number">8.1.</span> <span class="toc-text">8.1 当前锁信息</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-%E5%85%B3%E9%94%AE%E5%AD%97%E6%AE%B5%E8%A7%A3%E8%AF%BB"><span class="toc-number">8.2.</span> <span class="toc-text">8.2 关键字段解读</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-3-%E5%B8%B8%E8%A7%81-lock-mode-%E5%90%AB%E4%B9%89"><span class="toc-number">8.3.</span> <span class="toc-text">8.3 常见 lock_mode 含义</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#9-%E5%8F%82%E6%95%B0%E8%B0%83%E4%BC%98"><span class="toc-number">9.</span> <span class="toc-text">9. 参数调优</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#10-%E6%80%BB%E7%BB%93"><span class="toc-number">10.</span> <span class="toc-text">10. 总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">11.</span> <span class="toc-text">参考</span></a></li></ol>
+      </div>
+    
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&text=InnoDB 行锁详解"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&is_video=false&description=InnoDB 行锁详解"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=InnoDB 行锁详解&body=Check out this article: https://aqiu16717.github.io/2026/05/08/innodb-row-lock/"><i class="fa-solid fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&title=InnoDB 行锁详解"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&name=InnoDB 行锁详解&description=&lt;p&gt;InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：&lt;strong&gt;行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上&lt;/strong&gt;。理解这一点，是搞懂 InnoDB 并发行为的前提。&lt;/p&gt;"><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://aqiu16717.github.io/2026/05/08/innodb-row-lock/&t=InnoDB 行锁详解"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fa-solid fa-bars fa-lg" aria-hidden="true"></i> 菜单</a>
+        
+          <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fa-solid fa-list fa-lg" aria-hidden="true"></i> 目录</a>
+        
+        <!-- 语言切换 -->
+        
+        <a id="lang-switch-mobile" class="icon" href="/en/2026/05/08/innodb-row-lock-en/">
+          <i class="fa-solid fa-globe fa-lg" aria-hidden="true"></i> EN
+        </a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fa-solid fa-share-alt fa-lg" aria-hidden="true"></i> 分享</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fa-solid fa-chevron-up fa-lg" aria-hidden="true"></i> 返回顶部</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-center">
+    Copyright &copy;
+    
+    
+    2024-2026
+    aq1u
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+ 
+  <link
+    rel="preload"
+    href="/lib/font-awesome/css/all.min.css"
+    as="style"
+    onload="this.onload=null;this.rel='stylesheet'"
+  />
+  <noscript
+    ><link
+      rel="stylesheet"
+      href="/lib/font-awesome/css/all.min.css"
+  /></noscript>
+
+
+    <!-- jquery -->
+
+  
+<script src="/lib/jquery/jquery.min.js"></script>
+
+
+
+
+
+<!-- clipboard -->
+
+  
+    
+<script src="/lib/clipboard/clipboard.min.js"></script>
+
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"复制到粘贴板！\">";
+    btn += '<i class="fa-regular fa-clone"></i>';
+    btn += '</span>';
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "复制成功！");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+
+<!-- Language Preference -->
+<script type="text/javascript">
+(function() {
+  // Get current language from HTML lang attribute
+  var currentLang = document.documentElement.lang || 'zh';
+  var storedLang = localStorage.getItem('preferred-lang');
+  
+  // Save language preference when user switches language
+  $(document).on('click', '.lang-dropdown a', function(e) {
+    var href = $(this).attr('href');
+    if (href && href.startsWith('/en')) {
+      localStorage.setItem('preferred-lang', 'en');
+    } else {
+      localStorage.setItem('preferred-lang', 'zh');
+    }
+  });
+  
+  // Check if we should redirect based on stored preference
+  // Only redirect on homepage to avoid loops
+  if (storedLang && window.location.pathname === '/') {
+    if (storedLang === 'en' && currentLang !== 'en') {
+      window.location.href = '/en/';
+    }
+  }
+  
+  // Add smooth transition for language switcher
+  $('.lang-switch > a').on('click', function(e) {
+    e.preventDefault();
+    $('.lang-dropdown').toggleClass('show');
+  });
+  
+  // Close dropdown when clicking outside
+  $(document).on('click', function(e) {
+    if (!$(e.target).closest('.lang-switch').length) {
+      $('.lang-dropdown').removeClass('show');
+    }
+  });
+})();
+</script>
+<!-- search -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
