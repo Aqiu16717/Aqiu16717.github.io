@@ -6,7 +6,7 @@
   <link href="https://aqiu16717.github.io/atom.xml" rel="self"/>
   
   <link href="https://aqiu16717.github.io/"/>
-  <updated>2026-05-08T15:36:49.963Z</updated>
+  <updated>2026-05-11T14:56:32.379Z</updated>
   <id>https://aqiu16717.github.io/</id>
   
   <author>
@@ -17,11 +17,67 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>CockroachDB 分布式事务实现原理</title>
+    <link href="https://aqiu16717.github.io/2026/05/11/cockroachdb-distributed-transaction/"/>
+    <id>https://aqiu16717.github.io/2026/05/11/cockroachdb-distributed-transaction/</id>
+    <published>2026-05-11T04:48:00.000Z</published>
+    <updated>2026-05-11T14:56:32.379Z</updated>
+    
+    
+    <summary type="html">&lt;p&gt;CockroachDB（蟑螂数据库）是一个面向云的分布式 SQL 数据库，其核心设计目标是在全球分布式环境下提供强一致性（Serializable 隔离级别）的事务支持。本文深入解析 CockroachDB 分布式事务的实现原理。&lt;/p&gt;</summary>
+    
+    
+    
+    <category term="分布式系统" scheme="https://aqiu16717.github.io/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
+    
+    
+    <category term="CockroachDB" scheme="https://aqiu16717.github.io/tags/CockroachDB/"/>
+    
+    <category term="分布式事务" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%BA%8B%E5%8A%A1/"/>
+    
+    <category term="2PC" scheme="https://aqiu16717.github.io/tags/2PC/"/>
+    
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
+    <category term="分布式系统" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>Google F1 的 Online Schema Change 设计与实现</title>
+    <link href="https://aqiu16717.github.io/2026/05/09/f1-online-schema-change/"/>
+    <id>https://aqiu16717.github.io/2026/05/09/f1-online-schema-change/</id>
+    <published>2026-05-09T06:00:00.000Z</published>
+    <updated>2026-05-09T05:44:05.000Z</updated>
+    
+    
+    <summary type="html">&#92;&#39;在分布式数据库里改表结构，是一件比单机数据库复杂得多的事情。Google F1 的论文 Online, Asynchronous Schema Change in F1 给出了一个经典的解法：如何在不停机、不阻塞读写的前提下，完成分布式环境下的 schema 变更。这套机制后来被 Spanner、CockroachDB 等系统广泛借鉴。&#92;&#39;</summary>
+    
+    
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    
+    <category term="F1" scheme="https://aqiu16717.github.io/tags/F1/"/>
+    
+    <category term="Google" scheme="https://aqiu16717.github.io/tags/Google/"/>
+    
+    <category term="Spanner" scheme="https://aqiu16717.github.io/tags/Spanner/"/>
+    
+    <category term="Schema Change" scheme="https://aqiu16717.github.io/tags/Schema-Change/"/>
+    
+    <category term="分布式数据库" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
+  </entry>
+  
+  <entry>
     <title>MySQL 源码剖析：TABLE 对象的生命周期</title>
     <link href="https://aqiu16717.github.io/2026/05/09/mysql-table-lifecycle/"/>
     <id>https://aqiu16717.github.io/2026/05/09/mysql-table-lifecycle/</id>
     <published>2026-05-09T02:00:00.000Z</published>
-    <updated>2026-05-08T15:36:49.963Z</updated>
+    <updated>2026-05-10T10:36:55.542Z</updated>
     
     
     <summary type="html">&lt;p&gt;在 MySQL Server 层，&lt;code&gt;TABLE&lt;/code&gt; 结构体是 SQL 执行过程中最核心的数据结构之一。它既不是磁盘上的表定义，也不是存储引擎里的数据页，而是&lt;strong&gt;Server 层对一个已打开表的运行时抽象&lt;/strong&gt;。&lt;/p&gt;
@@ -32,11 +88,11 @@
     <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
     <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
     
     <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
-    
-    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     <category term="源码剖析" scheme="https://aqiu16717.github.io/tags/%E6%BA%90%E7%A0%81%E5%89%96%E6%9E%90/"/>
     
@@ -47,7 +103,7 @@
     <link href="https://aqiu16717.github.io/2026/05/08/innodb-row-lock/"/>
     <id>https://aqiu16717.github.io/2026/05/08/innodb-row-lock/</id>
     <published>2026-05-08T10:00:00.000Z</published>
-    <updated>2026-05-08T13:26:48.923Z</updated>
+    <updated>2026-05-10T10:36:55.539Z</updated>
     
     
     <summary type="html">&lt;p&gt;InnoDB 的行锁是 MySQL 并发控制的根基，但它有一个反直觉的特点：&lt;strong&gt;行锁并不直接锁在数据行上，而是锁在索引的记录和间隙上&lt;/strong&gt;。理解这一点，是搞懂 InnoDB 并发行为的前提。&lt;/p&gt;</summary>
@@ -57,11 +113,11 @@
     <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
     <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
     
     <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
-    
-    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     <category term="行锁" scheme="https://aqiu16717.github.io/tags/%E8%A1%8C%E9%94%81/"/>
     
@@ -74,7 +130,7 @@
     <link href="https://aqiu16717.github.io/2026/05/08/update-primary-key-mysql-vs-pg/"/>
     <id>https://aqiu16717.github.io/2026/05/08/update-primary-key-mysql-vs-pg/</id>
     <published>2026-05-08T09:00:00.000Z</published>
-    <updated>2026-05-08T13:14:33.592Z</updated>
+    <updated>2026-05-10T10:36:55.544Z</updated>
     
     
     <summary type="html">&lt;p&gt;同一条 &lt;code&gt;UPDATE users SET id = 999 WHERE id = 1&lt;/code&gt;，在 MySQL 里可能是性能灾难，在 PostgreSQL 里却平平无奇。根源不在 SQL 层，而在&lt;strong&gt;数据怎么落盘&lt;/strong&gt;。&lt;/p&gt;</summary>
@@ -83,6 +139,8 @@
     
     <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     <category term="PostgreSQL" scheme="https://aqiu16717.github.io/tags/PostgreSQL/"/>
     
@@ -94,8 +152,6 @@
     
     <category term="存储引擎" scheme="https://aqiu16717.github.io/tags/%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/"/>
     
-    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
     <category term="主键" scheme="https://aqiu16717.github.io/tags/%E4%B8%BB%E9%94%AE/"/>
     
   </entry>
@@ -105,7 +161,7 @@
     <link href="https://aqiu16717.github.io/2026/05/08/mysql-mdl-shared-read-write/"/>
     <id>https://aqiu16717.github.io/2026/05/08/mysql-mdl-shared-read-write/</id>
     <published>2026-05-08T08:00:00.000Z</published>
-    <updated>2026-05-08T12:58:58.400Z</updated>
+    <updated>2026-05-10T10:36:55.541Z</updated>
     
     
     <summary type="html">&lt;p&gt;MySQL 的 MDL（Metadata Lock）里有两个看起来很像的锁类型：&lt;code&gt;SHARED_READ&lt;/code&gt;（SR）和 &lt;code&gt;SHARED_WRITE&lt;/code&gt;（SW）。它们都不会修改表结构，本质上都是”对元数据只读”。那为什么要根据业务语句是读数据还是写数据，把元数据锁拆成两种？&lt;/p&gt;
@@ -116,11 +172,11 @@
     <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
+    
     <category term="MySQL" scheme="https://aqiu16717.github.io/tags/MySQL/"/>
     
     <category term="InnoDB" scheme="https://aqiu16717.github.io/tags/InnoDB/"/>
-    
-    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     <category term="MDL" scheme="https://aqiu16717.github.io/tags/MDL/"/>
     
@@ -133,7 +189,7 @@
     <link href="https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/"/>
     <id>https://aqiu16717.github.io/2026/05/08/heap-table-vs-iot/</id>
     <published>2026-05-08T07:00:00.000Z</published>
-    <updated>2026-05-08T12:33:22.232Z</updated>
+    <updated>2026-05-10T10:36:55.539Z</updated>
     
     
     <summary type="html">&lt;p&gt;关系型数据库的表数据在磁盘上怎么放，看似是底层细节，却直接决定了查询性能、空间管理和并发行为的方方面面。PostgreSQL、Oracle 默认用&lt;strong&gt;堆表（Heap Table）&lt;/strong&gt;，而 MySQL InnoDB 默认用&lt;strong&gt;索引组织表（IOT，Index-Organized Table）&lt;/strong&gt;。两种设计没有绝对的优劣，只有不同的取舍。&lt;/p&gt;</summary>
@@ -142,6 +198,8 @@
     
     <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
+    
+    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     <category term="PostgreSQL" scheme="https://aqiu16717.github.io/tags/PostgreSQL/"/>
     
@@ -153,8 +211,6 @@
     
     <category term="存储引擎" scheme="https://aqiu16717.github.io/tags/%E5%AD%98%E5%82%A8%E5%BC%95%E6%93%8E/"/>
     
-    <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
   </entry>
   
   <entry>
@@ -162,7 +218,7 @@
     <link href="https://aqiu16717.github.io/2026/05/08/paxos-vs-raft/"/>
     <id>https://aqiu16717.github.io/2026/05/08/paxos-vs-raft/</id>
     <published>2026-05-08T06:00:00.000Z</published>
-    <updated>2026-05-08T05:16:37.741Z</updated>
+    <updated>2026-05-10T10:36:55.542Z</updated>
     
     
     <summary type="html">&lt;p&gt;分布式系统的核心难题之一是&lt;strong&gt;共识（Consensus）&lt;/strong&gt;：如何让一群可能故障的节点对某个值达成一致。Paxos 和 Raft 是这个问题最著名的两个解法。它们解决的是同一个问题，但走了截然不同的路径。&lt;/p&gt;</summary>
@@ -172,6 +228,8 @@
     <category term="分布式系统" scheme="https://aqiu16717.github.io/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
     
     
+    <category term="分布式系统" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
+    
     <category term="Paxos" scheme="https://aqiu16717.github.io/tags/Paxos/"/>
     
     <category term="Raft" scheme="https://aqiu16717.github.io/tags/Raft/"/>
@@ -180,8 +238,6 @@
     
     <category term="分布式一致性" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7/"/>
     
-    <category term="分布式系统" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
-    
   </entry>
   
   <entry>
@@ -189,7 +245,7 @@
     <link href="https://aqiu16717.github.io/2026/04/12/raft-engineering/"/>
     <id>https://aqiu16717.github.io/2026/04/12/raft-engineering/</id>
     <published>2026-04-12T13:03:28.000Z</published>
-    <updated>2026-05-08T05:27:26.287Z</updated>
+    <updated>2026-05-10T10:36:55.543Z</updated>
     
     
       
@@ -213,7 +269,7 @@
     <link href="https://aqiu16717.github.io/2026/04/10/asio-timer/"/>
     <id>https://aqiu16717.github.io/2026/04/10/asio-timer/</id>
     <published>2026-04-10T05:20:36.000Z</published>
-    <updated>2026-04-10T05:31:34.799Z</updated>
+    <updated>2026-05-10T10:36:55.538Z</updated>
     
     
       
@@ -238,7 +294,7 @@
     <link href="https://aqiu16717.github.io/2026/03/19/modern_cpp/"/>
     <id>https://aqiu16717.github.io/2026/03/19/modern_cpp/</id>
     <published>2026-03-19T06:48:45.000Z</published>
-    <updated>2026-04-12T12:15:25.641Z</updated>
+    <updated>2026-05-10T10:36:55.540Z</updated>
     
     
       
@@ -264,7 +320,7 @@
     <link href="https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html"/>
     <id>https://aqiu16717.github.io/en/2026/02/09/snapshot-isolation/index.html</id>
     <published>2026-02-09T15:30:00.000Z</published>
-    <updated>2026-04-10T05:19:44.733Z</updated>
+    <updated>2026-05-10T10:36:55.543Z</updated>
     
     
       
@@ -280,13 +336,13 @@
     <category term="database" scheme="https://aqiu16717.github.io/categories/database/"/>
     
     
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
     <category term="database" scheme="https://aqiu16717.github.io/tags/database/"/>
     
     <category term="transaction" scheme="https://aqiu16717.github.io/tags/transaction/"/>
     
     <category term="isolation level" scheme="https://aqiu16717.github.io/tags/isolation-level/"/>
-    
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
     
     <category term="concurrency control" scheme="https://aqiu16717.github.io/tags/concurrency-control/"/>
     
@@ -297,7 +353,7 @@
     <link href="https://aqiu16717.github.io/2026/02/09/snapshot-isolation/"/>
     <id>https://aqiu16717.github.io/2026/02/09/snapshot-isolation/</id>
     <published>2026-02-09T15:30:00.000Z</published>
-    <updated>2026-04-10T05:19:44.733Z</updated>
+    <updated>2026-05-10T10:36:55.544Z</updated>
     
     
       
@@ -313,11 +369,11 @@
     <category term="数据库" scheme="https://aqiu16717.github.io/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     
+    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
+    
     <category term="数据库" scheme="https://aqiu16717.github.io/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
     
     <category term="事务" scheme="https://aqiu16717.github.io/tags/%E4%BA%8B%E5%8A%A1/"/>
-    
-    <category term="MVCC" scheme="https://aqiu16717.github.io/tags/MVCC/"/>
     
     <category term="隔离级别" scheme="https://aqiu16717.github.io/tags/%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB/"/>
     
@@ -328,7 +384,7 @@
     <link href="https://aqiu16717.github.io/en/2025/11/12/innodb/index.html"/>
     <id>https://aqiu16717.github.io/en/2025/11/12/innodb/index.html</id>
     <published>2025-11-12T14:35:51.000Z</published>
-    <updated>2026-04-10T05:19:44.732Z</updated>
+    <updated>2026-05-10T10:36:55.539Z</updated>
     
     
       
@@ -359,7 +415,7 @@
     <link href="https://aqiu16717.github.io/2025/11/12/innodb/"/>
     <id>https://aqiu16717.github.io/2025/11/12/innodb/</id>
     <published>2025-11-12T14:35:51.000Z</published>
-    <updated>2026-04-10T05:19:44.732Z</updated>
+    <updated>2026-05-10T10:36:55.540Z</updated>
     
     
       
@@ -382,7 +438,7 @@
     <link href="https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/"/>
     <id>https://aqiu16717.github.io/2025/03/28/raft-consensus-algorithm/</id>
     <published>2025-03-27T18:25:00.000Z</published>
-    <updated>2026-04-12T12:35:12.682Z</updated>
+    <updated>2026-05-10T10:36:55.543Z</updated>
     
     
       
@@ -399,13 +455,13 @@
     <category term="分布式系统" scheme="https://aqiu16717.github.io/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
     
     
+    <category term="分布式系统" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
+    
     <category term="Raft" scheme="https://aqiu16717.github.io/tags/Raft/"/>
     
     <category term="共识算法" scheme="https://aqiu16717.github.io/tags/%E5%85%B1%E8%AF%86%E7%AE%97%E6%B3%95/"/>
     
     <category term="分布式一致性" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7/"/>
-    
-    <category term="分布式系统" scheme="https://aqiu16717.github.io/tags/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/"/>
     
   </entry>
   
